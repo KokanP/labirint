@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Maze Navigator</title>
+    <title>Maze Algorithm Platform</title>
     <style>
         /* --- Basic Page Styling --- */
         body {
@@ -16,17 +16,63 @@
             height: 100vh;
             margin: 0;
             flex-direction: column;
-            overflow: hidden; /* Prevent scrolling on mobile */
+            overflow-y: auto; /* Allow scrolling for menu */
         }
 
         h1 {
             color: #e0e0e0;
             text-shadow: 2px 2px 4px #000;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
-        /* --- Game Container --- */
+        /* --- Algorithm Selection Menu --- */
+        #selection-menu {
+            display: flex; /* Visible by default */
+            flex-direction: column;
+            align-items: center;
+            background-color: #2c2c2c;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 500px;
+            margin: 20px 0;
+        }
+        .algo-option {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .algo-option:last-child {
+            margin-bottom: 0;
+        }
+        .algo-option button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #111;
+            background-color: #00aaff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .algo-option button:hover {
+            background-color: #4dc3ff;
+            transform: scale(1.02);
+        }
+        .algo-description {
+            font-size: 0.9em;
+            color: #bbb;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+
+        /* --- Game Container (initially hidden) --- */
         #game-container {
-            display: flex;
+            display: none; /* Hidden by default */
             flex-direction: column;
             align-items: center;
             padding: 20px;
@@ -82,7 +128,7 @@
         
         /* --- Mobile D-Pad Controls --- */
         #d-pad {
-            display: none; /* Hidden by default, enabled by mobile.js */
+            display: none;
             position: fixed;
             bottom: 20px;
             left: 50%;
@@ -103,61 +149,75 @@
             align-items: center;
             font-size: 24px;
             color: white;
-            user-select: none; /* Prevents text selection on tap */
+            user-select: none;
         }
         #d-pad-up { top: 0; left: 50px; }
         #d-pad-down { bottom: 0; left: 50px; }
         #d-pad-left { top: 50px; left: 0; }
         #d-pad-right { top: 50px; right: 0; }
+
+        /* --- Mobile Compacting --- */
+        @media (max-width: 600px) {
+            body { justify-content: flex-start; }
+            #selection-menu { padding: 20px; }
+            .algo-option button { padding: 12px; font-size: 1em; }
+            .algo-description { font-size: 0.8em; margin-top: 5px; }
+            h1 { font-size: 1.8em; margin-top: 20px; }
+            #win-message h2 { font-size: 2.5em; }
+            #win-message p { font-size: 1.5em; }
+        }
     </style>
 </head>
 <body>
-    <h1>Maze Navigator</h1>
+    <h1>Maze Algorithm Platform</h1>
+
+    <div id="selection-menu">
+        <div class="algo-option"><button id="start-dfs">Depth-First Search</button><p class="algo-description">Creates long, winding corridors with few branches. Fast and simple.</p></div>
+        <div class="algo-option"><button id="start-kruskal">Kruskal's Algorithm</button><p class="algo-description">Produces many short dead ends and a high number of branches.</p></div>
+        <div class="algo-option"><button id="start-division">Recursive Division</button><p class="algo-description">Divides the field with walls, creating a distinct rectangular pattern.</p></div>
+        <div class="algo-option"><button id="start-wilson">Wilson's Algorithm</button><p class="algo-description">Creates a highly uniform and unbiased maze. Slower to generate.</p></div>
+        <div class="algo-option"><button id="start-prim">Prim's Algorithm</button><p class="algo-description">Grows like a crystal from a start point, similar to Kruskal's.</p></div>
+        <div class="algo-option"><button id="start-binary-tree">Binary Tree</button><p class="algo-description">Very fast, but creates a strong diagonal bias in the passages.</p></div>
+        <div class="algo-option"><button id="start-sidewinder">Sidewinder</button><p class="algo-description">Fast and simple. Creates a maze with a clear horizontal texture.</p></div>
+        <div class="algo-option"><button id="start-growing-tree">Growing Tree</button><p class="algo-description">A flexible algorithm that can produce varied maze textures.</p></div>
+    </div>
+
     <div id="game-container">
-        <div id="ui-bar">
-            <div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-value">0s</div></div>
-            <div class="stat"><div class="stat-label">MOVES</div><div class="stat-value" id="moves-value">0</div></div>
-            <div class="stat"><div class="stat-label">BACKTRACKS</div><div class="stat-value" id="backtracks-value">0</div></div>
-        </div>
+        <div id="ui-bar"><div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-value">0s</div></div><div class="stat"><div class="stat-label">MOVES</div><div class="stat-value" id="moves-value">0</div></div><div class="stat"><div class="stat-label">BACKTRACKS</div><div class="stat-value" id="backtracks-value">0</div></div></div>
         <canvas id="mazeCanvas"></canvas>
-        <div id="win-message">
-            <h2>You Win!</h2><p id="final-score"></p><button id="restart-button">Play Again</button>
-        </div>
+        <div id="win-message"><h2>You Win!</h2><p id="final-score"></p><button id="restart-button">Play Again</button></div>
     </div>
 
-    <!-- Mobile On-Screen Controls -->
-    <div id="d-pad">
-        <div id="d-pad-up" class="d-pad-button">▲</div>
-        <div id="d-pad-left" class="d-pad-button">◄</div>
-        <div id="d-pad-right" class="d-pad-button">►</div>
-        <div id="d-pad-down" class="d-pad-button">▼</div>
-    </div>
+    <div id="d-pad"><div id="d-pad-up" class="d-pad-button">▲</div><div id="d-pad-left" class="d-pad-button">◄</div><div id="d-pad-right" class="d-pad-button">►</div><div id="d-pad-down" class="d-pad-button">▼</div></div>
 
-    <!-- 1. Load the shared game engine first -->
-    <script src="game-core.js"></script>
-
-    <!-- 2. The Bootstrapper Script to load the correct version -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Use a reliable check for mobile devices
-            const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            const isSmallScreen = window.innerWidth < 800; // Also treat small screens as mobile
-
-            // Create a new script element
+        function loadScript(src, callback) {
             const script = document.createElement('script');
-
-            // Decide which version to load
-            if (isMobile || isSmallScreen) {
-                console.log("Device detected as mobile. Loading mobile version...");
-                script.src = 'mobile-version.js'; 
-            } else {
-                console.log("Device detected as desktop. Loading desktop version...");
-                script.src = 'desktop-version.js';
-            }
-
-            // Add the chosen script to the document's head, which will cause it to be downloaded and run
+            script.src = src;
+            script.onload = callback;
+            script.onerror = () => console.error(`Failed to load script: ${src}`);
             document.head.appendChild(script);
-        });
+        }
+
+        function selectAlgorithm(algoFile, generatorFunctionName) {
+            loadScript(`algorithms/${algoFile}`, () => {
+                if (typeof window[generatorFunctionName] === 'function') {
+                    window.mazeGenerator = window[generatorFunctionName];
+                    loadScript('game-core.js', () => { startGame(); });
+                } else {
+                    console.error(`Generator function ${generatorFunctionName} not found in ${algoFile}`);
+                }
+            });
+        }
+
+        document.getElementById('start-dfs').addEventListener('click', () => selectAlgorithm('dfs.js', 'generateDFS'));
+        document.getElementById('start-kruskal').addEventListener('click', () => selectAlgorithm('kruskal.js', 'generateKruskal'));
+        document.getElementById('start-division').addEventListener('click', () => selectAlgorithm('division.js', 'generateDivision'));
+        document.getElementById('start-wilson').addEventListener('click', () => selectAlgorithm('wilson.js', 'generateWilson'));
+        document.getElementById('start-prim').addEventListener('click', () => selectAlgorithm('prim.js', 'generatePrim'));
+        document.getElementById('start-binary-tree').addEventListener('click', () => selectAlgorithm('binary-tree.js', 'generateBinaryTree'));
+        document.getElementById('start-sidewinder').addEventListener('click', () => selectAlgorithm('sidewinder.js', 'generateSidewinder'));
+        document.getElementById('start-growing-tree').addEventListener('click', () => selectAlgorithm('growing-tree.js', 'generateGrowingTree'));
     </script>
 </body>
 </html>

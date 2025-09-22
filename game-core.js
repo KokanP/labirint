@@ -7,6 +7,8 @@ const backtracksValue = document.getElementById('backtracks-value');
 const winMessage = document.getElementById('win-message');
 const finalScoreDisplay = document.getElementById('final-score');
 const restartButton = document.getElementById('restart-button');
+const selectionMenu = document.getElementById('selection-menu');
+const gameContainer = document.getElementById('game-container');
 
 // --- Game Constants ---
 const MAZE_WIDTH = 40;
@@ -21,7 +23,7 @@ const COLORS = {
 };
 
 // --- Mutable Game Settings ---
-let CELL_SIZE; // Changed from const to let
+let CELL_SIZE; // Will be set by desktop- or mobile-version.js
 
 // --- Game State Variables ---
 let grid = [];
@@ -44,60 +46,14 @@ let animStartTime = 0;
 let startPixelPos = { x: 0, y: 0 };
 let targetPixelPos = { x: 0, y: 0 };
 
-// --- Cell Class ---
+// --- Cell Class (used by all generators) ---
 class Cell {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.walls = { top: true, right: true, bottom: true, left: true };
-        this.visited = false;
+        this.visited = false; // Used by some generators
     }
-}
-
-// --- Maze Generation (DFS) ---
-function generateMaze(width, height) {
-    let maze = Array.from({ length: height }, (_, y) =>
-        Array.from({ length: width }, (_, x) => new Cell(x, y))
-    );
-
-    const stack = [];
-    let current = maze[0][0];
-    current.visited = true;
-    let visitedCount = 1;
-
-    while (visitedCount < width * height) {
-        const { x, y } = current;
-        const neighbors = [];
-        if (y > 0 && !maze[y - 1][x].visited) neighbors.push(maze[y - 1][x]);
-        if (x < width - 1 && !maze[y][x + 1].visited) neighbors.push(maze[y][x + 1]);
-        if (y < height - 1 && !maze[y + 1][x].visited) neighbors.push(maze[y + 1][x]);
-        if (x > 0 && !maze[y][x - 1].visited) neighbors.push(maze[y][x - 1]);
-
-        if (neighbors.length > 0) {
-            const next = neighbors[Math.floor(Math.random() * neighbors.length)];
-            stack.push(current);
-
-            if (next.x === x && next.y === y - 1) { // Up
-                current.walls.top = false;
-                next.walls.bottom = false;
-            } else if (next.x === x + 1 && next.y === y) { // Right
-                current.walls.right = false;
-                next.walls.left = false;
-            } else if (next.x === x && next.y === y + 1) { // Down
-                current.walls.bottom = false;
-                next.walls.top = false;
-            } else if (next.x === x - 1 && next.y === y) { // Left
-                current.walls.left = false;
-                next.walls.right = false;
-            }
-            current = next;
-            current.visited = true;
-            visitedCount++;
-        } else if (stack.length > 0) {
-            current = stack.pop();
-        }
-    }
-    return maze;
 }
 
 // --- UI & Scoring ---
@@ -127,7 +83,14 @@ function init() {
     visitedCells.clear();
     visitedCells.add(`${playerPos.x},${playerPos.y}`);
 
-    grid = generateMaze(MAZE_WIDTH, MAZE_HEIGHT);
+    // Generate maze using the globally assigned generator function
+    if (window.mazeGenerator) {
+        grid = window.mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
+    } else {
+        console.error("No maze generator has been selected!");
+        return;
+    }
+    
     startTime = performance.now();
 }
 
@@ -181,18 +144,36 @@ function update() {
 function gameLoop() {
     update();
     if (window.draw) {
-        window.draw();
+        window.draw(); // draw() is defined in desktop- or mobile-version.js
     }
     requestAnimationFrame(gameLoop);
 }
 
+// --- Game Starter ---
+function startGame() {
+    // Hide menu, show game
+    selectionMenu.style.display = 'none';
+    gameContainer.style.display = 'flex';
+
+    // Load the correct version (desktop/mobile) based on device
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isSmallScreen = window.innerWidth < 800;
+
+    const versionScript = (isMobile || isSmallScreen) ? 'mobile-version.js' : 'desktop-version.js';
+    
+    // Dynamically load the script for the detected version
+    const script = document.createElement('script');
+    script.src = versionScript;
+    script.onload = () => {
+        // The loaded script will call init() and gameLoop()
+        console.log(`${versionScript} loaded and started.`);
+    };
+    document.head.appendChild(script);
+}
+
 restartButton.addEventListener('click', () => {
-    // Re-initialize based on the script that is loaded
-    if (window.initDesktop) {
-        init();
-        window.initDesktop();
-    } else {
-        init();
-    }
+    // For restarting, we just need to re-initialize the game state.
+    // The generator and version script are already loaded.
+    init();
 });
 
