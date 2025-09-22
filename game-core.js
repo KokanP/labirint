@@ -28,7 +28,7 @@ const COLORS = { WALL: '#e0e0e0', PLAYER: '#00aaff', START: '#00e676', END: '#ff
 
 class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { top: true, right: true, bottom: true, left: true }; } }
 
-// --- ONE-TIME INITIALIZATION ---
+// --- ONE-TIME INITIALIZATION (called after all scripts are loaded) ---
 function initGame() {
     restartButton.addEventListener('click', () => {
         winMessage.style.display = 'none';
@@ -36,11 +36,10 @@ function initGame() {
         gameContainer.style.display = 'none';
         if (gameLoopId) cancelAnimationFrame(gameLoopId);
     });
-    // The main game loop will be started by restartGame
 }
 
-// --- GAME RESET & START FUNCTION ---
-function restartGame() {
+// --- GAME RESET & START FUNCTION (takes generator as argument) ---
+function restartGame(mazeGenerator) {
     selectionMenu.style.display = 'none';
     gameContainer.style.display = 'flex';
     winMessage.style.display = 'none';
@@ -56,11 +55,11 @@ function restartGame() {
     isMoving = false;
     gameWon = false;
 
-    // Generate new maze using the selected generator
-    if (typeof window.mazeGenerator === 'function') {
-        grid = window.mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
+    // Generate new maze using the provided generator function
+    if (typeof mazeGenerator === 'function') {
+        grid = mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
     } else {
-        console.error("No maze generator function selected!");
+        console.error("A valid maze generator function was not provided to restartGame!");
         return;
     }
 

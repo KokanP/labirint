@@ -191,46 +191,36 @@
     <div id="d-pad"><div id="d-pad-up" class="d-pad-button">▲</div><div id="d-pad-left" class="d-pad-button">◄</div><div id="d-pad-right" class="d-pad-button">►</div><div id="d-pad-down" class="d-pad-button">▼</div></div>
 
     <script>
-        // --- Refactored Game Loading Logic ---
-        let coreLoaded = false;
-        let versionLoaded = false;
+        // --- Robust Game Loading Logic ---
 
         function loadScript(src, callback) {
             const script = document.createElement('script');
             script.src = src;
-            script.onload = () => {
-                if (callback) callback();
-            };
+            script.onload = callback;
             script.onerror = () => console.error(`Failed to load script: ${src}`);
             document.head.appendChild(script);
         }
 
-        function initializeAndStartGame() {
-            // This function is the final step, called after all scripts are loaded.
-            initGame(); // A new function in game-core.js for one-time setup
-            restartGame(); // A new function for resetting the game state
-        }
+        // 1. Load the core game logic first
+        loadScript('game-core.js', () => {
+            // 2. After core is loaded, determine version and load it
+            const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const versionFile = isMobile ? 'mobile-version.js' : 'desktop-version.js';
+            loadScript(versionFile, () => {
+                // 3. After version script is loaded, initialize the game's one-time setup
+                initGame();
+            });
+        });
 
+        // This function is now simplified: it just loads the algorithm and calls restart
         function selectAlgorithm(algoFile, generatorFunctionName) {
             loadScript(`algorithms/${algoFile}`, () => {
-                window.mazeGenerator = window[generatorFunctionName];
-
-                if (!coreLoaded) {
-                    coreLoaded = true;
-                    loadScript('game-core.js', () => {
-                        const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-                        const versionFile = isMobile ? 'mobile-version.js' : 'desktop-version.js';
-                        
-                        if (!versionLoaded) {
-                            versionLoaded = true;
-                            loadScript(versionFile, initializeAndStartGame);
-                        } else {
-                            initializeAndStartGame();
-                        }
-                    });
+                const generator = window[generatorFunctionName];
+                if (typeof generator === 'function') {
+                    // Call restartGame with the specific generator function
+                    restartGame(generator);
                 } else {
-                    // If core is already loaded, just reset the game.
-                    restartGame();
+                    console.error(`Generator function ${generatorFunctionName} not found in ${algoFile}`);
                 }
             });
         }
