@@ -113,7 +113,7 @@ window.draw = function() {
 
     // Clamp camera to maze boundaries
     const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - CANVAS_WIDTH;
-    const maxCameraY = (MAKE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT;
+    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT; // POPRAVEK TUKAJ
     cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
     cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
 
