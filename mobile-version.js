@@ -2,7 +2,7 @@
 
 // --- Mobile-Specific Constants ---
 // Make the virtual cell size larger for a zoomed-in feel
-CELL_SIZE = 40; // A fixed large size for the cells
+CELL_SIZE = 20; // Halved from 40 to show 2x more of the maze
 const CANVAS_WIDTH = Math.min(window.innerWidth * 0.9, 600);
 const CANVAS_HEIGHT = Math.min(window.innerHeight * 0.6, 600);
 
@@ -113,7 +113,7 @@ window.draw = function() {
 
     // Clamp camera to maze boundaries
     const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - CANVAS_WIDTH;
-    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT;
+    const maxCameraY = (MAKE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT;
     cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
     cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
 
@@ -132,3 +132,4 @@ window.draw = function() {
 // --- Start Game ---
 init();
 gameLoop();
+
