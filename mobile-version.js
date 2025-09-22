@@ -1,8 +1,8 @@
 // This script provides the controls and rendering for the mobile version.
+isMobileVersion = true; // Set the global flag
 
 // --- Mobile-Specific Constants ---
-// Make the virtual cell size larger for a zoomed-in feel
-CELL_SIZE = 20; // Halved from 40 to show 2x more of the maze
+CELL_SIZE = 20; // Smaller cells for a wider view
 const CANVAS_WIDTH = Math.min(window.innerWidth * 0.9, 600);
 const CANVAS_HEIGHT = Math.min(window.innerHeight * 0.6, 600);
 
@@ -10,36 +10,21 @@ canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
 // --- D-Pad Controls ---
-const dPad = document.getElementById('d-pad');
-dPad.style.display = 'block'; // Make the D-pad visible
-
-const upButton = document.getElementById('d-pad-up');
-const downButton = document.getElementById('d-pad-down');
-const leftButton = document.getElementById('d-pad-left');
-const rightButton = document.getElementById('d-pad-right');
-
-const keyMap = {
-    'd-pad-up': 'ArrowUp',
-    'd-pad-down': 'ArrowDown',
-    'd-pad-left': 'ArrowLeft',
-    'd-pad-right': 'ArrowRight',
-};
+// MODIFIED: Fixed the typo for the 'down' button
+const keyMap = { 'd-pad-up': 'ArrowUp', 'd-pad-down': 'ArrowDown', 'd-pad-left': 'ArrowLeft', 'd-pad-right': 'ArrowRight' };
 
 function handleTouch(event) {
     event.preventDefault();
     const key = keyMap[event.target.id];
     if (key) {
-        const isTouching = event.type === 'touchstart';
-        keysPressed[key] = isTouching;
+        keysPressed[key] = (event.type === 'touchstart');
     }
 }
-
 dPad.addEventListener('touchstart', handleTouch, { passive: false });
 dPad.addEventListener('touchend', handleTouch, { passive: false });
 
 
 // --- Drawing Functions (Mobile: Viewport Camera) ---
-// These functions are identical to desktop, but will be drawn on a translated canvas
 function drawMaze() {
     ctx.strokeStyle = COLORS.WALL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 10);
@@ -60,7 +45,8 @@ function drawMaze() {
 
 function drawTrail() {
     if (playerPath.length < 2) return;
-    ctx.strokeStyle = COLORS.TRAIL;
+    // MODIFIED: Uses the dynamic trailColor variable
+    ctx.strokeStyle = trailColor; 
     ctx.lineWidth = Math.max(1, CELL_SIZE / 5);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -88,12 +74,16 @@ function drawPlayer(pixelPos) {
     ctx.fill();
 }
 
-// --- Main Draw Function (Global for gameLoop) ---
-window.draw = function() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.save(); // Save the default state
+// MODIFIED: This function is now empty as it's no longer needed.
+// The solver path is drawn via drawTrail.
+function drawSolverPaths() {}
 
-    // --- Camera Logic ---
+
+// --- Main Draw Function ---
+window.draw = function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+
     let currentPixelPos = {
         x: playerPos.x * CELL_SIZE + CELL_SIZE / 2,
         y: playerPos.y * CELL_SIZE + CELL_SIZE / 2
@@ -107,29 +97,20 @@ window.draw = function() {
         if (progress >= 1.0) isMoving = false;
     }
 
-    // Center camera on player
-    let cameraX = currentPixelPos.x - CANVAS_WIDTH / 2;
-    let cameraY = currentPixelPos.y - CANVAS_HEIGHT / 2;
-
-    // Clamp camera to maze boundaries
-    const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - CANVAS_WIDTH;
-    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT; // POPRAVEK TUKAJ
+    let cameraX = currentPixelPos.x - canvas.width / 2;
+    let cameraY = currentPixelPos.y - canvas.height / 2;
+    const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - canvas.width;
+    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - canvas.height;
     cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
     cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
-
-    // Move the entire world opposite to the camera
     ctx.translate(-cameraX, -cameraY);
 
-    // --- Draw all game elements ---
     drawEndpoints();
+    drawSolverPaths(); // This is now empty, but we keep the call for consistency
     drawTrail();
     drawMaze();
     drawPlayer(currentPixelPos);
 
-    ctx.restore(); // Restore to default state
+    ctx.restore();
 }
-
-// --- Start Game ---
-init();
-gameLoop();
 

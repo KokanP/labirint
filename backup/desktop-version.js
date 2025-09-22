@@ -1,28 +1,30 @@
 // This script provides the controls and rendering for the desktop version.
-isMobileVersion = false;
 
 // --- Desktop-Specific Constants ---
-const maxCanvasWidth = Math.min(window.innerWidth * 0.9, 800);
-const maxCanvasHeight = Math.min(window.innerHeight * 0.8, 800);
-CELL_SIZE = Math.floor(Math.min(maxCanvasWidth / MAZE_WIDTH, maxCanvasHeight / MAZE_HEIGHT));
+const availableWidth = window.innerWidth * 0.9;
+const availableHeight = window.innerHeight * 0.7;
+CELL_SIZE = Math.floor(Math.min(availableWidth / MAZE_WIDTH, availableHeight / MAZE_HEIGHT));
 canvas.width = MAZE_WIDTH * CELL_SIZE;
 canvas.height = MAZE_HEIGHT * CELL_SIZE;
 
 // --- Keyboard Controls ---
-function setupDesktopControls() {
-    window.addEventListener('keydown', (e) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            keysPressed[e.key] = true;
-        }
-    });
-    window.addEventListener('keyup', (e) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            keysPressed[e.key] = false;
-        }
-    });
-}
+// This ensures that the event listeners are added only once when this script loads.
+window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = true;
+    }
+});
 
-// --- Drawing Functions (Desktop: Full View) ---
+window.addEventListener('keyup', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = false;
+    }
+});
+
+
+// --- Drawing Functions (Desktop: Full Map) ---
 function drawMaze() {
     ctx.strokeStyle = COLORS.WALL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 10);
@@ -43,7 +45,7 @@ function drawMaze() {
 
 function drawTrail() {
     if (playerPath.length < 2) return;
-    ctx.strokeStyle = trailColor; // MODIFIED: Use dynamic trail color
+    ctx.strokeStyle = COLORS.TRAIL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 5);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -71,19 +73,10 @@ function drawPlayer(pixelPos) {
     ctx.fill();
 }
 
-function drawSolverPaths() {
-    // MODIFIED: This now ONLY draws the exploration path.
-    // The yellow path is drawn by drawTrail during autopilot.
-    ctx.fillStyle = COLORS.SOLVER_EXPLORE;
-    exploredPath.forEach(cell => {
-        ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    });
-}
-
-// --- Main Draw Function ---
+// --- Main Draw Function (Global for gameLoop) ---
 window.draw = function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     let currentPixelPos = {
         x: playerPos.x * CELL_SIZE + CELL_SIZE / 2,
         y: playerPos.y * CELL_SIZE + CELL_SIZE / 2
@@ -97,14 +90,9 @@ window.draw = function() {
         if (progress >= 1.0) isMoving = false;
     }
 
-    // Drawing order is important for layers
     drawEndpoints();
-    if(isSolving) drawSolverPaths(); // Draw gray exploration squares first
-    drawTrail(); // Draw red/yellow path on top
+    drawTrail();
     drawMaze();
     drawPlayer(currentPixelPos);
 }
-
-// --- Setup ---
-setupDesktopControls();
 

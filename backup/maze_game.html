@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Maze Algorithm Platform</title>
+    <style>
+        /* --- Basic Page Styling --- */
+        body {
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            overflow-y: auto; /* Allow scrolling for menu */
+        }
+
+        h1 {
+            color: #e0e0e0;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* --- Algorithm Selection Menu --- */
+        #selection-menu {
+            display: flex; /* Visible by default */
+            flex-direction: column;
+            align-items: center;
+            background-color: #2c2c2c;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 500px;
+            margin: 20px 0;
+        }
+        .algo-option {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .algo-option:last-child {
+            margin-bottom: 0;
+        }
+        .algo-option button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #111;
+            background-color: #00aaff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .algo-option button:hover {
+            background-color: #4dc3ff;
+            transform: scale(1.02);
+        }
+        .algo-description {
+            font-size: 0.9em;
+            color: #bbb;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+
+        /* --- Game Container (initially hidden) --- */
+        #game-container {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #2c2c2c;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* --- UI Stats Bar --- */
+        #ui-bar {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            background-color: #3a3a3a;
+            padding: 10px 0;
+            border-radius: 10px;
+        }
+
+        .stat { flex: 1; text-align: center; }
+        .stat-label { color: #aaa; font-size: 0.8em; }
+        .stat-value { color: #fff; font-weight: bold; }
+
+        /* --- Game Canvas --- */
+        canvas {
+            background-color: #111;
+            border-radius: 8px;
+            border: 2px solid #444;
+        }
+
+        /* --- Win Message Overlay --- */
+        #win-message {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            border-radius: 15px;
+            justify-content: center; align-items: center;
+            flex-direction: column; text-align: center;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #win-message h2 { font-size: 4em; color: #ffd700; margin: 0; text-shadow: 3px 3px 6px #000; }
+        #win-message p { font-size: 2em; color: #f0f0f0; margin-top: 10px; }
+        #restart-button {
+            margin-top: 30px; padding: 15px 30px; font-size: 1.2em; font-weight: bold;
+            color: #111; background-color: #ffd700; border: none; border-radius: 10px;
+            cursor: pointer; transition: background-color 0.3s, transform 0.2s;
+        }
+        #restart-button:hover { background-color: #ffec80; transform: scale(1.05); }
+        
+        /* --- Mobile D-Pad Controls --- */
+        #d-pad {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 150px;
+            opacity: 0.6;
+        }
+        .d-pad-button {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #555;
+            border: 2px solid #888;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            user-select: none;
+        }
+        #d-pad-up { top: 0; left: 50px; }
+        #d-pad-down { bottom: 0; left: 50px; }
+        #d-pad-left { top: 50px; left: 0; }
+        #d-pad-right { top: 50px; right: 0; }
+
+        /* --- Mobile Compacting --- */
+        @media (max-width: 600px) {
+            body { justify-content: flex-start; }
+            #selection-menu { padding: 20px; }
+            .algo-option button { padding: 12px; font-size: 1em; }
+            .algo-description { font-size: 0.8em; margin-top: 5px; }
+            h1 { font-size: 1.8em; margin-top: 20px; }
+            #win-message h2 { font-size: 2.5em; }
+            #win-message p { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Maze Algorithm Platform</h1>
+
+    <div id="selection-menu">
+        <div class="algo-option"><button id="start-dfs">Depth-First Search</button><p class="algo-description">Creates long, winding corridors with few branches. Fast and simple.</p></div>
+        <div class="algo-option"><button id="start-kruskal">Kruskal's Algorithm</button><p class="algo-description">Produces many short dead ends and a high number of branches.</p></div>
+        <div class="algo-option"><button id="start-division">Recursive Division</button><p class="algo-description">Divides the field with walls, creating a distinct rectangular pattern.</p></div>
+        <div class="algo-option"><button id="start-wilson">Wilson's Algorithm</button><p class="algo-description">Creates a highly uniform and unbiased maze. Slower to generate.</p></div>
+        <div class="algo-option"><button id="start-prim">Prim's Algorithm</button><p class="algo-description">Grows like a crystal from a start point, similar to Kruskal's.</p></div>
+        <div class="algo-option"><button id="start-binary-tree">Binary Tree</button><p class="algo-description">Very fast, but creates a strong diagonal bias in the passages.</p></div>
+        <div class="algo-option"><button id="start-sidewinder">Sidewinder</button><p class="algo-description">Fast and simple. Creates a maze with a clear horizontal texture.</p></div>
+        <div class="algo-option"><button id="start-growing-tree">Growing Tree</button><p class="algo-description">A flexible algorithm that can produce varied maze textures.</p></div>
+    </div>
+
+    <div id="game-container">
+        <div id="ui-bar"><div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-value">0s</div></div><div class="stat"><div class="stat-label">MOVES</div><div class="stat-value" id="moves-value">0</div></div><div class="stat"><div class="stat-label">BACKTRACKS</div><div class="stat-value" id="backtracks-value">0</div></div></div>
+        <canvas id="mazeCanvas"></canvas>
+        <div id="win-message"><h2>You Win!</h2><p id="final-score"></p><button id="restart-button">Play Again</button></div>
+    </div>
+
+    <div id="d-pad"><div id="d-pad-up" class="d-pad-button">▲</div><div id="d-pad-left" class="d-pad-button">◄</div><div id="d-pad-right" class="d-pad-button">►</div><div id="d-pad-down" class="d-pad-button">▼</div></div>
+
+    <script>
+        // --- Robust Game Loading Logic ---
+
+        function loadScript(src, callback) {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = callback;
+            script.onerror = () => console.error(`Failed to load script: ${src}`);
+            document.head.appendChild(script);
+        }
+
+        // 1. Load the core game logic first
+        loadScript('game-core.js', () => {
+            // 2. After core is loaded, determine version and load it
+            const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const versionFile = isMobile ? 'mobile-version.js' : 'desktop-version.js';
+            loadScript(versionFile, () => {
+                // 3. After version script is loaded, initialize the game's one-time setup
+                initGame();
+            });
+        });
+
+        // This function is now simplified: it just loads the algorithm and calls restart
+        function selectAlgorithm(algoFile, generatorFunctionName) {
+            loadScript(`algorithms/${algoFile}`, () => {
+                const generator = window[generatorFunctionName];
+                if (typeof generator === 'function') {
+                    // Call restartGame with the specific generator function
+                    restartGame(generator);
+                } else {
+                    console.error(`Generator function ${generatorFunctionName} not found in ${algoFile}`);
+                }
+            });
+        }
+        
+        // --- Event Listeners for Menu Buttons ---
+        document.getElementById('start-dfs').addEventListener('click', () => selectAlgorithm('dfs.js', 'generateDFS'));
+        document.getElementById('start-kruskal').addEventListener('click', () => selectAlgorithm('kruskal.js', 'generateKruskal'));
+        document.getElementById('start-division').addEventListener('click', () => selectAlgorithm('division.js', 'generateDivision'));
+        document.getElementById('start-wilson').addEventListener('click', () => selectAlgorithm('wilson.js', 'generateWilson'));
+        document.getElementById('start-prim').addEventListener('click', () => selectAlgorithm('prim.js', 'generatePrim'));
+        document.getElementById('start-binary-tree').addEventListener('click', () => selectAlgorithm('binary-tree.js', 'generateBinaryTree'));
+        document.getElementById('start-sidewinder').addEventListener('click', () => selectAlgorithm('sidewinder.js', 'generateSidewinder'));
+        document.getElementById('start-growing-tree').addEventListener('click', () => selectAlgorithm('growing-tree.js', 'generateGrowingTree'));
+    </script>
+</body>
+</html>
+

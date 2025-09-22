@@ -11,40 +11,56 @@ const finalScore = document.getElementById('final-score');
 const restartButton = document.getElementById('restart-button');
 const selectionMenu = document.getElementById('selection-menu');
 const gameContainer = document.getElementById('game-container');
+const solveButton = document.getElementById('solve-button');
+const dPad = document.getElementById('d-pad');
 
 // --- Global Game State Variables ---
 let MAZE_WIDTH = 40, MAZE_HEIGHT = 40;
-let CELL_SIZE; // Will be set by the version script
-const MOVE_SPEED = 0.1; // Seconds per cell
+let CELL_SIZE;
+const MOVE_SPEED = 0.1;
 let grid, playerPos, endPos;
 let playerPath, visitedCells;
 let move_count, backtrack_count, startTime, finalTime, final_score;
 let isMoving, animStartTime, startPixelPos, targetPixelPos;
 let gameWon, gameLoopId;
+let isMobileVersion = false;
+let trailColor;
 
-const keysPressed = {}; // Shared object for controls
+// --- SOLVER STATE ---
+let isSolving = false;
+let exploredPath = [];
+let solutionPath = []; // Only used for desktop exploration phase display
 
-const COLORS = { WALL: '#e0e0e0', PLAYER: '#00aaff', START: '#00e676', END: '#ff1744', TRAIL: '#ff5252' };
+const keysPressed = {};
+
+const COLORS = { 
+    WALL: '#e0e0e0', PLAYER: '#00aaff', START: '#00e676', 
+    END: '#ff1744', TRAIL: '#ff5252', 
+    SOLVER_EXPLORE: 'rgba(128, 128, 128, 0.5)',
+    SOLVER_PATH: '#ffd700'
+};
 
 class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { top: true, right: true, bottom: true, left: true }; } }
 
-// --- ONE-TIME INITIALIZATION (called after all scripts are loaded) ---
+// --- ONE-TIME INITIALIZATION ---
 function initGame() {
     restartButton.addEventListener('click', () => {
         winMessage.style.display = 'none';
         selectionMenu.style.display = 'flex';
         gameContainer.style.display = 'none';
+        if (isMobileVersion) dPad.style.display = 'none';
         if (gameLoopId) cancelAnimationFrame(gameLoopId);
     });
+    solveButton.addEventListener('click', startSolverAnimation);
 }
 
-// --- GAME RESET & START FUNCTION (takes generator as argument) ---
+// --- GAME RESET & START ---
 function restartGame(mazeGenerator) {
     selectionMenu.style.display = 'none';
     gameContainer.style.display = 'flex';
     winMessage.style.display = 'none';
+    if (isMobileVersion) dPad.style.display = 'block';
     
-    // Reset game state
     playerPos = { x: 0, y: 0 };
     endPos = { x: MAZE_WIDTH - 1, y: MAZE_HEIGHT - 1 };
     playerPath = [playerPos];
@@ -54,23 +70,152 @@ function restartGame(mazeGenerator) {
     startTime = performance.now();
     isMoving = false;
     gameWon = false;
+    trailColor = COLORS.TRAIL;
 
-    // Generate new maze using the provided generator function
+    isSolving = false;
+    exploredPath = [];
+    solutionPath = [];
+    solveButton.disabled = false;
+
     if (typeof mazeGenerator === 'function') {
         grid = mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
     } else {
-        console.error("A valid maze generator function was not provided to restartGame!");
+        console.error("A valid maze generator function was not provided!");
         return;
     }
 
-    // Stop any previous game loop and start a new one
     if (gameLoopId) cancelAnimationFrame(gameLoopId);
     gameLoop();
 }
 
+// --- Centralized Win Function ---
+function triggerWinState(solvedBySolver = false) {
+    if (gameWon) return;
+    gameWon = true;
+    solveButton.disabled = true;
+    finalTime = (performance.now() - startTime) / 1000;
+
+    const winTitle = document.querySelector('#win-message h2');
+
+    if (solvedBySolver) {
+        winTitle.textContent = "Maze Solved!";
+        // The optimal path length is now based on playerPath length during autopilot
+        const moves = playerPath.length - 1;
+        finalScore.textContent = `The optimal path is ${moves} moves.`;
+    } else {
+        winTitle.textContent = "You Win!";
+        let score = 10000 - Math.floor(finalTime * 10) - (move_count * 5) - (backtrack_count * 50);
+        final_score = Math.max(0, score);
+        finalScore.textContent = `Score: ${final_score}`;
+    }
+    winMessage.style.display = 'flex';
+}
+
+// --- BFS SOLVER LOGIC ---
+function solveMazeBFS(startNode) {
+    const start = startNode;
+    const end = grid[endPos.y][endPos.x];
+    const queue = [start];
+    const visited = new Set([`${start.x},${start.y}`]);
+    const predecessor = new Map();
+    const explorationOrder = [];
+
+    while(queue.length > 0) {
+        const current = queue.shift();
+        explorationOrder.push(current);
+
+        if (current === end) {
+            let path = [];
+            let at = end;
+            while(at) {
+                path.unshift(at);
+                at = predecessor.get(at);
+            }
+            return { path, explorationOrder };
+        }
+
+        const { x, y, walls } = current;
+        const neighbors = [];
+        if (!walls.top && y > 0) neighbors.push(grid[y - 1][x]);
+        if (!walls.bottom && y < MAZE_HEIGHT - 1) neighbors.push(grid[y + 1][x]);
+        if (!walls.left && x > 0) neighbors.push(grid[y][x - 1]);
+        if (!walls.right && x < MAZE_WIDTH - 1) neighbors.push(grid[y][x + 1]);
+
+        for (const neighbor of neighbors) {
+            const key = `${neighbor.x},${neighbor.y}`;
+            if (!visited.has(key)) {
+                visited.add(key);
+                predecessor.set(neighbor, current);
+                queue.push(neighbor);
+            }
+        }
+    }
+    return { path: [], explorationOrder };
+}
+
+// --- Solver Autopilot (Used by both Mobile and Desktop) ---
+function startAutopilot(path) {
+    let currentStep = 0;
+    
+    const autopilotInterval = setInterval(() => {
+        if (currentStep >= path.length - 1) {
+            clearInterval(autopilotInterval);
+            triggerWinState(true);
+            return;
+        }
+        if(!isSolving) {
+             clearInterval(autopilotInterval);
+             return;
+        }
+
+        const startNode = path[currentStep];
+        const endNode = path[currentStep + 1];
+
+        isMoving = true;
+        animStartTime = performance.now();
+        startPixelPos = { x: startNode.x * CELL_SIZE + CELL_SIZE / 2, y: startNode.y * CELL_SIZE + CELL_SIZE / 2 };
+        targetPixelPos = { x: endNode.x * CELL_SIZE + CELL_SIZE / 2, y: endNode.y * CELL_SIZE + CELL_SIZE / 2 };
+        
+        playerPos = endNode;
+        playerPath.push(playerPos);
+        
+        currentStep++;
+    }, (MOVE_SPEED * 1000) + 50);
+}
+
+function startSolverAnimation() {
+    if (isSolving || gameWon) return;
+    isSolving = true;
+    solveButton.disabled = true;
+
+    const startNode = grid[playerPos.y][playerPos.x];
+    const { path, explorationOrder } = solveMazeBFS(startNode);
+    
+    // --- DESKTOP: Exploration followed by Autopilot ---
+    if (!isMobileVersion) {
+        let i = 0;
+        const exploreInterval = setInterval(() => {
+            if (i < explorationOrder.length) {
+                exploredPath.push(explorationOrder[i]);
+                i++;
+            } else {
+                clearInterval(exploreInterval);
+                // MODIFICATION: Instead of drawing the path, start the autopilot
+                trailColor = COLORS.SOLVER_PATH; // Change trail to yellow
+                startAutopilot(path); // Character starts moving
+            }
+        }, 5);
+    } 
+    // --- MOBILE: Autopilot with yellow trail ---
+    else {
+        trailColor = COLORS.SOLVER_PATH;
+        startAutopilot(path);
+    }
+}
+
 // --- CORE GAME UPDATE LOGIC ---
 function update() {
-    if (gameWon || isMoving) return;
+    if (gameWon || isMoving || isSolving) return;
 
     let targetDirection = null;
     if (keysPressed.ArrowUp) targetDirection = { x: 0, y: -1, wall: 'top' };
@@ -83,13 +228,11 @@ function update() {
         if (!currentCell.walls[targetDirection.wall]) {
             const nextPos = { x: playerPos.x + targetDirection.x, y: playerPos.y + targetDirection.y };
             
-            // Start animation
             isMoving = true;
             animStartTime = performance.now();
             startPixelPos = { x: playerPos.x * CELL_SIZE + CELL_SIZE / 2, y: playerPos.y * CELL_SIZE + CELL_SIZE / 2 };
             targetPixelPos = { x: nextPos.x * CELL_SIZE + CELL_SIZE / 2, y: nextPos.y * CELL_SIZE + CELL_SIZE / 2 };
 
-            // Update logical state
             playerPos = nextPos;
             move_count++;
             const posKey = `${playerPos.x},${playerPos.y}`;
@@ -99,14 +242,8 @@ function update() {
         }
     }
 
-    // Check for win condition
     if (playerPos.x === endPos.x && playerPos.y === endPos.y) {
-        gameWon = true;
-        finalTime = (performance.now() - startTime) / 1000;
-        let score = 10000 - Math.floor(finalTime * 10) - (move_count * 5) - (backtrack_count * 50);
-        final_score = Math.max(0, score);
-        finalScore.textContent = `Score: ${final_score}`;
-        winMessage.style.display = 'flex';
+        triggerWinState(false);
     }
 }
 
@@ -124,7 +261,7 @@ function updateUI() {
 function gameLoop() {
     update();
     if (typeof window.draw === 'function') {
-        window.draw(); // Call the draw function from desktop/mobile script
+        window.draw();
     }
     updateUI();
     gameLoopId = requestAnimationFrame(gameLoop);

@@ -1,28 +1,45 @@
-// This script provides the controls and rendering for the desktop version.
-isMobileVersion = false;
+// This script provides the controls and rendering for the mobile version.
 
-// --- Desktop-Specific Constants ---
-const maxCanvasWidth = Math.min(window.innerWidth * 0.9, 800);
-const maxCanvasHeight = Math.min(window.innerHeight * 0.8, 800);
-CELL_SIZE = Math.floor(Math.min(maxCanvasWidth / MAZE_WIDTH, maxCanvasHeight / MAZE_HEIGHT));
-canvas.width = MAZE_WIDTH * CELL_SIZE;
-canvas.height = MAZE_HEIGHT * CELL_SIZE;
+// --- Mobile-Specific Constants ---
+// Make the virtual cell size larger for a zoomed-in feel
+CELL_SIZE = 20; // Halved from 40 to show 2x more of the maze
+const CANVAS_WIDTH = Math.min(window.innerWidth * 0.9, 600);
+const CANVAS_HEIGHT = Math.min(window.innerHeight * 0.6, 600);
 
-// --- Keyboard Controls ---
-function setupDesktopControls() {
-    window.addEventListener('keydown', (e) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            keysPressed[e.key] = true;
-        }
-    });
-    window.addEventListener('keyup', (e) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            keysPressed[e.key] = false;
-        }
-    });
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
+
+// --- D-Pad Controls ---
+const dPad = document.getElementById('d-pad');
+dPad.style.display = 'block'; // Make the D-pad visible
+
+const upButton = document.getElementById('d-pad-up');
+const downButton = document.getElementById('d-pad-down');
+const leftButton = document.getElementById('d-pad-left');
+const rightButton = document.getElementById('d-pad-right');
+
+const keyMap = {
+    'd-pad-up': 'ArrowUp',
+    'd-pad-down': 'ArrowDown',
+    'd-pad-left': 'ArrowLeft',
+    'd-pad-right': 'ArrowRight',
+};
+
+function handleTouch(event) {
+    event.preventDefault();
+    const key = keyMap[event.target.id];
+    if (key) {
+        const isTouching = event.type === 'touchstart';
+        keysPressed[key] = isTouching;
+    }
 }
 
-// --- Drawing Functions (Desktop: Full View) ---
+dPad.addEventListener('touchstart', handleTouch, { passive: false });
+dPad.addEventListener('touchend', handleTouch, { passive: false });
+
+
+// --- Drawing Functions (Mobile: Viewport Camera) ---
+// These functions are identical to desktop, but will be drawn on a translated canvas
 function drawMaze() {
     ctx.strokeStyle = COLORS.WALL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 10);
@@ -43,7 +60,7 @@ function drawMaze() {
 
 function drawTrail() {
     if (playerPath.length < 2) return;
-    ctx.strokeStyle = trailColor; // MODIFIED: Use dynamic trail color
+    ctx.strokeStyle = COLORS.TRAIL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 5);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -71,19 +88,12 @@ function drawPlayer(pixelPos) {
     ctx.fill();
 }
 
-function drawSolverPaths() {
-    // MODIFIED: This now ONLY draws the exploration path.
-    // The yellow path is drawn by drawTrail during autopilot.
-    ctx.fillStyle = COLORS.SOLVER_EXPLORE;
-    exploredPath.forEach(cell => {
-        ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    });
-}
-
-// --- Main Draw Function ---
+// --- Main Draw Function (Global for gameLoop) ---
 window.draw = function() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save(); // Save the default state
+
+    // --- Camera Logic ---
     let currentPixelPos = {
         x: playerPos.x * CELL_SIZE + CELL_SIZE / 2,
         y: playerPos.y * CELL_SIZE + CELL_SIZE / 2
@@ -97,14 +107,29 @@ window.draw = function() {
         if (progress >= 1.0) isMoving = false;
     }
 
-    // Drawing order is important for layers
+    // Center camera on player
+    let cameraX = currentPixelPos.x - CANVAS_WIDTH / 2;
+    let cameraY = currentPixelPos.y - CANVAS_HEIGHT / 2;
+
+    // Clamp camera to maze boundaries
+    const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - CANVAS_WIDTH;
+    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT; // POPRAVEK TUKAJ
+    cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
+    cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
+
+    // Move the entire world opposite to the camera
+    ctx.translate(-cameraX, -cameraY);
+
+    // --- Draw all game elements ---
     drawEndpoints();
-    if(isSolving) drawSolverPaths(); // Draw gray exploration squares first
-    drawTrail(); // Draw red/yellow path on top
+    drawTrail();
     drawMaze();
     drawPlayer(currentPixelPos);
+
+    ctx.restore(); // Restore to default state
 }
 
-// --- Setup ---
-setupDesktopControls();
+// --- Start Game ---
+init();
+gameLoop();
 
