@@ -4,46 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Labirint: The Maze Algorithm</title>
-    <!-- NEW: Pixel Font Import -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         /* --- Basic Page Styling --- */
         body {
-            background-color: #140c1c; /* Dark Purple Background */
+            background-color: #140c1c;
             color: #f0f0f0;
-            /* MODIFIED: Pixel Font */
             font-family: 'Press Start 2P', cursive;
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             height: 100vh;
             margin: 0;
             flex-direction: column;
             overflow: hidden;
-            /* Prevents blurry text */
             image-rendering: pixelated;
         }
 
         h1 {
             color: #fff4e4;
             text-shadow: 2px 2px 0px #000;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            /* MODIFIED: Centered the title */
+            font-size: 1.5em;
             text-align: center;
-            width: 90%;
+            margin: 20px 0;
+            flex-shrink: 0;
         }
-
-        /* --- Algorithm Selection Menu --- */
+        
+        /* --- Scrollable Menu Container --- */
+        #selection-menu-container {
+            flex-grow: 1;
+            width: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 80px; /* Space for the new footer */
+        }
+        
         #selection-menu {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #443453; /* Darker Purple UI element */
+            background-color: #443453;
             padding: 20px;
-            /* MODIFIED: Hard border instead of radius/shadow */
             border: 3px solid #000;
             box-shadow: 6px 6px 0 #000;
             width: 90%;
@@ -53,14 +58,11 @@
             width: 100%;
             margin-bottom: 10px;
         }
-        .algo-option:last-child {
-            margin-bottom: 0;
-        }
+        .algo-option:last-child { margin-bottom: 0; }
         .algo-option button {
             width: 100%;
             padding: 15px;
             font-size: 1em;
-            font-weight: normal; /* Pixel fonts are often bold by default */
             font-family: 'Press Start 2P', cursive;
             color: #140c1c;
             border: 3px solid #000;
@@ -70,167 +72,124 @@
             justify-content: space-between;
             align-items: center;
         }
-        .algo-option button:hover { 
-            transform: translate(2px, 2px);
-        }
-         .algo-option button:active {
-            transform: translate(4px, 4px);
-        }
-        .algo-description {
-            font-size: 0.8em;
-            color: #a49da9; /* Lighter purple/gray */
-            margin-top: 8px;
-            text-align: center;
-            line-height: 1.6;
-        }
-        .algo-name {
-            text-align: left;
-        }
-        .algo-difficulty {
-            font-size: 0.8em;
-            font-weight: normal;
-            opacity: 0.8;
-        }
+        .algo-option button:hover { transform: translate(2px, 2px); }
+        .algo-option button:active { transform: translate(4px, 4px); }
+        .algo-description { font-size: 0.8em; color: #a49da9; margin-top: 8px; text-align: center; line-height: 1.6; }
+        .algo-name { text-align: left; }
+        .algo-difficulty { font-size: 0.8em; opacity: 0.8; }
 
-        /* --- Difficulty Color Scale (Retro Palette) --- */
-        .difficulty-1 { background-color: #6abe30; } 
-        .difficulty-2 { background-color: #a4d35e; } 
-        .difficulty-3 { background-color: #e4d35a; } 
-        .difficulty-4 { background-color: #f7a244; } 
-        .difficulty-5 { background-color: #f47e3a; } 
-        .difficulty-6 { background-color: #e43b44; } 
-        .difficulty-7 { background-color: #a22633; color: #fff4e4 !important; }
-        .difficulty-8 { background-color: #731e32; color: #fff4e4 !important; }
+        /* --- Difficulty Colors --- */
+        .difficulty-1 { background-color: #6abe30; } .difficulty-2 { background-color: #a4d35e; } .difficulty-3 { background-color: #e4d35a; } .difficulty-4 { background-color: #f7a244; } .difficulty-5 { background-color: #f47e3a; } .difficulty-6 { background-color: #e43b44; } .difficulty-7 { background-color: #a22633; color: #fff4e4 !important; } .difficulty-8 { background-color: #731e32; color: #fff4e4 !important; }
 
-
-        /* --- Game Container --- */
-        #game-container {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            background-color: #443453;
-            border: 3px solid #000;
-            box-shadow: 6px 6px 0 #000;
-            position: relative;
-        }
-        /* --- UI & Canvas --- */
-        #ui-bar {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 15px;
-            font-size: 0.8em;
-            background-color: #262033;
-            padding: 10px 0;
-            align-items: center;
-            border: 3px solid #000;
-        }
+        /* --- Game Container & UI --- */
+        #game-container { display: none; flex-direction: column; align-items: center; padding: 20px; background-color: #443453; border: 3px solid #000; box-shadow: 6px 6px 0 #000; position: relative; }
+        #ui-bar { display: flex; justify-content: space-around; width: 100%; margin-bottom: 15px; font-size: 0.8em; background-color: #262033; padding: 10px 0; align-items: center; border: 3px solid #000; }
         .stat { flex: 1; text-align: center; }
         .stat-label { color: #a49da9; font-size: 0.8em; }
         .stat-value { color: #fff4e4; }
-        #solve-button {
-            margin: 0 15px;
-            padding: 8px 16px;
-            font-size: 0.8em;
-            font-family: 'Press Start 2P', cursive;
-            font-weight: normal;
-            color: #fff4e4;
-            background-color: #7b40a4; /* Purple button */
-            border: 3px solid #000;
-            cursor: pointer;
-        }
+        #solve-button { margin: 0 10px; padding: 8px 12px; font-size: 0.8em; font-family: 'Press Start 2P', cursive; color: #fff4e4; background-color: #7b40a4; border: 3px solid #000; cursor: pointer; }
         #solve-button:disabled { background-color: #555; cursor: not-allowed; }
         #solve-button:hover:not(:disabled) { background-color: #9d59d1; }
+        canvas { background-color: #140c1c; border: 3px solid #000; }
 
-        canvas {
-            background-color: #140c1c;
-            border: 3px solid #000;
-        }
         /* --- Win Message & D-Pad --- */
         #win-message { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(20, 12, 28, 0.9); justify-content: center; align-items: center; flex-direction: column; text-align: center; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         #win-message h2 { font-size: 2.5em; color: #ffec27; margin: 0; text-shadow: 3px 3px 0px #000; }
         #win-message p { font-size: 1.2em; color: #fff4e4; margin-top: 15px; line-height: 1.5; }
         #restart-button { margin-top: 30px; padding: 15px 30px; font-size: 1em; font-family: 'Press Start 2P', cursive; color: #140c1c; background-color: #ffec27; border: 3px solid #000; cursor: pointer; }
-        #restart-button:hover { background-color: #fff4e4; }
-        #d-pad { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; opacity: 0.8; }
+        #d-pad { display: none; position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; opacity: 0.8; z-index: 5; }
         .d-pad-button { position: absolute; width: 50px; height: 50px; background-color: #443453; border: 3px solid #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #fff4e4; user-select: none; }
         #d-pad-up { top: 0; left: 50px; } #d-pad-down { bottom: 0; left: 50px; } #d-pad-left { top: 50px; left: 0; } #d-pad-right { top: 50px; right: 0; }
 
+        /* --- MODIFIED: Footer Bar for Icons --- */
+        #footer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center; /* Center the invisible container */
+            z-index: 10;
+            pointer-events: none; /* Allows clicks to go through the bar itself */
+        }
+        #footer-content {
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            justify-content: flex-end; /* Aligns icons to the right */
+            align-items: center;
+            padding: 10px 0;
+            pointer-events: auto; /* Re-enables clicks for the content */
+            gap: 10px; /* Space between icons */
+        }
+        .icon-button { background: none; border: 3px solid #000; background-color: #443453; font-size: 1.5em; cursor: pointer; width: 45px; height: 45px; color: #fff4e4; padding: 0; }
+
+
+        /* --- Modal & Settings Styles --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(20, 12, 28, 0.85); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background-color: #443453; padding: 30px; border: 3px solid #000; box-shadow: 6px 6px 0 #000; width: 90%; max-width: 400px; text-align: center; }
+        .modal-content h2 { font-size: 1.5em; margin-top: 0; margin-bottom: 25px; color: #ffec27; text-shadow: 2px 2px 0 #000; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.9em; }
+        .setting-row label { text-align: left; }
+        .modal-content button { padding: 12px 25px; font-size: 0.9em; font-family: 'Press Start 2P', cursive; color: #140c1c; background-color: #ffec27; border: 3px solid #000; cursor: pointer; }
+        .premium-button { background-color: #6abe30 !important; }
+        .volume-control { display: flex; gap: 5px; }
+        .volume-block { width: 20px; height: 20px; background-color: #262033; border: 2px solid #000; cursor: pointer; }
+        .volume-block.active { box-shadow: inset 0 0 0 3px #fff4e4; }
+        .vb-off { background-color: #000 !important; } .vb-1 { background-color: #6abe30; } .vb-2 { background-color: #a4d35e; } .vb-3 { background-color: #e4d35a; } .vb-4 { background-color: #f7a244; } .vb-5 { background-color: #f47e3a; }
+
         /* --- Compact mobile menu --- */
         @media (max-width: 600px) {
-            h1 { font-size: 1.2em; }
-            #selection-menu { padding: 15px; box-shadow: 4px 4px 0 #000;}
+            h1 { font-size: 1em; margin: 15px 0; }
+            #selection-menu { padding: 15px; box-shadow: 4px 4px 0 #000; }
             .algo-option button { padding: 10px; font-size: 0.8em; }
-            .algo-description { font-size: 0.7em; margin-top: 5px;}
-            #win-message h2 { font-size: 2em; }
-            #win-message p { font-size: 1em; }
+            .algo-description { font-size: 0.7em; margin-top: 5px; }
+            #win-message h2 { font-size: 2em; } #win-message p { font-size: 1em; }
+            .icon-button { width: 40px; height: 40px; font-size: 1.2em;}
         }
     </style>
 </head>
 <body>
-    <h1>Labirint: The Maze Algorithm</h1>
+    <h1 id="main-title">Labirint: The Maze Algorithm</h1>
 
-    <div id="selection-menu">
-        <div class="algo-option">
-            <button id="start-dfs" class="difficulty-1">
-                <span class="algo-name">Depth-First</span>
-                <span class="algo-difficulty">(1/8)</span>
-            </button>
-            <div class="algo-description">Creates long, winding corridors. Ideal for learning the controls.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-growing-tree" class="difficulty-2">
-                <span class="algo-name">Growing Tree</span>
-                <span class="algo-difficulty">(2/8)</span>
-            </button>
-            <div class="algo-description">Similar to DFS, this algorithm produces long, simple paths.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-binary-tree" class="difficulty-3">
-                <span class="algo-name">Binary Tree</span>
-                <span class="algo-difficulty">(3/8)</span>
-            </button>
-            <div class="algo-description">Very fast. Creates a strong diagonal bias that can be exploited to solve.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-sidewinder" class="difficulty-4">
-                <span class="algo-name">Sidewinder</span>
-                <span class="algo-difficulty">(4/8)</span>
-            </button>
-            <div class="algo-description">Features long horizontal corridors with paths leading upwards.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-division" class="difficulty-5">
-                <span class="algo-name">Recursive Division</span>
-                <span class="algo-difficulty">(5/8)</span>
-            </button>
-            <div class="algo-description">Builds walls instead of carving paths, creating a blocky look.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-prim" class="difficulty-6">
-                <span class="algo-name">Prim's</span>
-                <span class="algo-difficulty">(6/8)</span>
-            </button>
-            <div class="algo-description">Grows like a crystal, creating a complex maze with many short dead ends.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-kruskal" class="difficulty-7">
-                <span class="algo-name">Kruskal's</span>
-                <span class="algo-difficulty">(7/8)</span>
-            </button>
-            <div class="algo-description">Produces a highly-branched maze with lots of cul-de-sacs.</div>
-        </div>
-        <div class="algo-option">
-            <button id="start-wilson" class="difficulty-8">
-                <span class="algo-name">Wilson's</span>
-                <span class="algo-difficulty">(8/8)</span>
-            </button>
-            <div class="algo-description">Creates a completely unbiased, uniform, and challenging maze.</div>
+    <div id="selection-menu-container">
+        <div id="selection-menu">
+            <!-- Algorithm options here -->
+            <div class="algo-option">
+                <button id="start-dfs" class="difficulty-1"><span class="algo-name">Depth-First</span><span class="algo-difficulty">(1/8)</span></button>
+                <div class="algo-description">Creates long, winding corridors. Ideal for learning the controls.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-growing-tree" class="difficulty-2"><span class="algo-name">Growing Tree</span><span class="algo-difficulty">(2/8)</span></button>
+                <div class="algo-description">Similar to DFS, this algorithm produces long, simple paths.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-binary-tree" class="difficulty-3"><span class="algo-name">Binary Tree</span><span class="algo-difficulty">(3/8)</span></button>
+                <div class="algo-description">Very fast. Creates a strong diagonal bias that can be exploited to solve.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-sidewinder" class="difficulty-4"><span class="algo-name">Sidewinder</span><span class="algo-difficulty">(4/8)</span></button>
+                <div class="algo-description">Features long horizontal corridors with paths leading upwards.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-division" class="difficulty-5"><span class="algo-name">Recursive Division</span><span class="algo-difficulty">(5/8)</span></button>
+                <div class="algo-description">Builds walls instead of carving paths, creating a blocky look.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-prim" class="difficulty-6"><span class="algo-name">Prim's</span><span class="algo-difficulty">(6/8)</span></button>
+                <div class="algo-description">Grows like a crystal, creating a complex maze with many short dead ends.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-kruskal" class="difficulty-7"><span class="algo-name">Kruskal's</span><span class="algo-difficulty">(7/8)</span></button>
+                <div class="algo-description">Produces a highly-branched maze with lots of cul-de-sacs.</div>
+            </div>
+            <div class="algo-option">
+                <button id="start-wilson" class="difficulty-8"><span class="algo-name">Wilson's</span><span class="algo-difficulty">(8/8)</span></button>
+                <div class="algo-description">Creates a completely unbiased, uniform, and challenging maze.</div>
+            </div>
         </div>
     </div>
-
+    
     <div id="game-container">
         <div id="ui-bar">
             <div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-value">0s</div></div>
@@ -244,6 +203,45 @@
         </div>
     </div>
 
+    <!-- Modals for Settings and About -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="setting-row">
+                <label>Music</label>
+                <div class="volume-control" id="music-volume-control" data-current-volume="4">
+                    <div class="volume-block vb-off" data-volume="0"></div>
+                    <div class="volume-block vb-1" data-volume="1"></div>
+                    <div class="volume-block vb-2" data-volume="2"></div>
+                    <div class="volume-block vb-3" data-volume="3"></div>
+                    <div class="volume-block vb-4" data-volume="4"></div>
+                    <div class="volume-block vb-5" data-volume="5"></div>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>SFX</label>
+                <div class="volume-control" id="sfx-volume-control" data-current-volume="5">
+                    <div class="volume-block vb-off" data-volume="0"></div>
+                    <div class="volume-block vb-1" data-volume="1"></div>
+                    <div class="volume-block vb-2" data-volume="2"></div>
+                    <div class="volume-block vb-3" data-volume="3"></div>
+                    <div class="volume-block vb-4" data-volume="4"></div>
+                    <div class="volume-block vb-5" data-volume="5"></div>
+                </div>
+            </div>
+            <button id="close-settings-button">Close</button>
+        </div>
+    </div>
+
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <h2>About</h2>
+            <p style="font-size: 0.9em; line-height: 1.6;">An educational platform for exploring maze generation algorithms.<br><br>Developed by You & Gemini AI.</p>
+            <button class="premium-button" style="margin-top: 20px; width: 100%;">Remove Ads</button>
+            <button id="close-about-button" style="margin-top: 15px;">Close</button>
+        </div>
+    </div>
+
     <div id="d-pad">
         <div id="d-pad-up" class="d-pad-button">▲</div>
         <div id="d-pad-left" class="d-pad-button">◄</div>
@@ -251,11 +249,17 @@
         <div id="d-pad-down" class="d-pad-button">▼</div>
     </div>
 
+    <!-- MODIFIED: Footer Bar for Icons -->
+    <div id="footer-bar">
+        <div id="footer-content">
+             <button class="icon-button" id="open-settings-button">⚙️</button>
+             <button class="icon-button" id="open-about-button">ℹ️</button>
+        </div>
+    </div>
+
     <script>
         // --- Global Game State & Loaders ---
-        let coreLoaded = false;
-        let versionLoaded = false;
-        let gameInitialized = false;
+        let coreLoaded = false, versionLoaded = false, gameInitialized = false;
 
         // --- Dynamic Script Loader ---
         function loadScript(src, callback) {
@@ -278,15 +282,8 @@
         function startup() {
             const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth < 800);
             const versionScript = isMobile ? 'mobile-version.js' : 'desktop-version.js';
-            
-            loadScript('game-core.js', () => {
-                coreLoaded = true;
-                initializeAndStartGame();
-            });
-            loadScript(versionScript, () => {
-                versionLoaded = true;
-                initializeAndStartGame();
-            });
+            loadScript('game-core.js', () => { coreLoaded = true; initializeAndStartGame(); });
+            loadScript(versionScript, () => { versionLoaded = true; initializeAndStartGame(); });
         }
         
         // --- Algorithm Selection Logic ---
@@ -310,6 +307,55 @@
         document.getElementById('start-prim').addEventListener('click', () => selectAlgorithm('prim.js', 'generatePrim'));
         document.getElementById('start-kruskal').addEventListener('click', () => selectAlgorithm('kruskal.js', 'generateKruskal'));
         document.getElementById('start-wilson').addEventListener('click', () => selectAlgorithm('wilson.js', 'generateWilson'));
+
+        // --- Modal Control Logic ---
+        const settingsModal = document.getElementById('settings-modal');
+        const aboutModal = document.getElementById('about-modal');
+
+        document.getElementById('open-settings-button').addEventListener('click', () => settingsModal.style.display = 'flex');
+        document.getElementById('close-settings-button').addEventListener('click', () => settingsModal.style.display = 'none');
+        
+        document.getElementById('open-about-button').addEventListener('click', () => aboutModal.style.display = 'flex');
+        document.getElementById('close-about-button').addEventListener('click', () => aboutModal.style.display = 'none');
+
+        window.addEventListener('click', (event) => {
+            if (event.target === settingsModal) settingsModal.style.display = 'none';
+            if (event.target === aboutModal) aboutModal.style.display = 'none';
+        });
+
+        // --- Pixel Volume Control Logic ---
+        function setupVolumeControls(containerId) {
+            const container = document.getElementById(containerId);
+            const blocks = container.querySelectorAll('.volume-block');
+
+            function updateVisuals(volume) {
+                blocks.forEach(block => {
+                    const blockVolume = parseInt(block.dataset.volume);
+                    block.classList.remove('active');
+                    if (volume === 0 && blockVolume === 0) {
+                        block.classList.add('active');
+                    } else if (blockVolume > 0 && blockVolume <= volume) {
+                        block.classList.add('active');
+                    }
+                });
+                container.dataset.currentVolume = volume;
+            }
+
+            container.addEventListener('click', (event) => {
+                if (event.target.classList.contains('volume-block')) {
+                    const selectedVolume = parseInt(event.target.dataset.volume);
+                    updateVisuals(selectedVolume);
+                    console.log(`${containerId} volume set to ${selectedVolume}`);
+                }
+            });
+
+            const initialVolume = parseInt(container.dataset.currentVolume);
+            updateVisuals(initialVolume);
+        }
+
+        setupVolumeControls('music-volume-control');
+        setupVolumeControls('sfx-volume-control');
+
 
         // --- Start the application ---
         startup();

@@ -9,10 +9,12 @@ const backtracksValue = document.getElementById('backtracks-value');
 const winMessage = document.getElementById('win-message');
 const finalScore = document.getElementById('final-score');
 const restartButton = document.getElementById('restart-button');
-const selectionMenu = document.getElementById('selection-menu');
+const selectionMenuContainer = document.getElementById('selection-menu-container');
 const gameContainer = document.getElementById('game-container');
 const solveButton = document.getElementById('solve-button');
 const dPad = document.getElementById('d-pad');
+const mainTitle = document.getElementById('main-title');
+
 
 // --- Global Game State Variables ---
 let MAZE_WIDTH = 40, MAZE_HEIGHT = 40;
@@ -33,7 +35,7 @@ let solutionPath = [];
 
 const keysPressed = {};
 
-// MODIFIED: New retro color palette
+// Retro color palette
 const COLORS = { 
     WALL: '#fff4e4', 
     PLAYER: '#29adff', 
@@ -50,8 +52,11 @@ class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { top: tru
 function initGame() {
     restartButton.addEventListener('click', () => {
         winMessage.style.display = 'none';
-        selectionMenu.style.display = 'flex';
+        // MODIFIED: Show menu elements
+        selectionMenuContainer.style.display = 'flex';
+        mainTitle.style.display = 'block';
         gameContainer.style.display = 'none';
+        document.body.classList.remove('game-active'); // Remove class
         if (isMobileVersion) dPad.style.display = 'none';
         if (gameLoopId) cancelAnimationFrame(gameLoopId);
     });
@@ -60,8 +65,12 @@ function initGame() {
 
 // --- GAME RESET & START ---
 function restartGame(mazeGenerator) {
-    selectionMenu.style.display = 'none';
+    // MODIFIED: Hide menu elements
+    selectionMenuContainer.style.display = 'none';
+    mainTitle.style.display = 'none';
     gameContainer.style.display = 'flex';
+    document.body.classList.add('game-active'); // Add class
+    
     winMessage.style.display = 'none';
     if (isMobileVersion) dPad.style.display = 'block';
     
@@ -203,7 +212,7 @@ function startSolverAnimation() {
                 i++;
             } else {
                 clearInterval(exploreInterval);
-                solutionPath = path; // Store the final path for drawing
+                solutionPath = path;
                 startAutopilot(path);
             }
         }, 5);
