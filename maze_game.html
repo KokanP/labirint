@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Maze Navigator</title>
+    <style>
+        /* --- Basic Page Styling --- */
+        body {
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            overflow: hidden; /* Prevent scrolling on mobile */
+        }
+
+        h1 {
+            color: #e0e0e0;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        /* --- Game Container --- */
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #2c2c2c;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* --- UI Stats Bar --- */
+        #ui-bar {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            background-color: #3a3a3a;
+            padding: 10px 0;
+            border-radius: 10px;
+        }
+
+        .stat { flex: 1; text-align: center; }
+        .stat-label { color: #aaa; font-size: 0.8em; }
+        .stat-value { color: #fff; font-weight: bold; }
+
+        /* --- Game Canvas --- */
+        canvas {
+            background-color: #111;
+            border-radius: 8px;
+            border: 2px solid #444;
+        }
+
+        /* --- Win Message Overlay --- */
+        #win-message {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            border-radius: 15px;
+            justify-content: center; align-items: center;
+            flex-direction: column; text-align: center;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #win-message h2 { font-size: 4em; color: #ffd700; margin: 0; text-shadow: 3px 3px 6px #000; }
+        #win-message p { font-size: 2em; color: #f0f0f0; margin-top: 10px; }
+        #restart-button {
+            margin-top: 30px; padding: 15px 30px; font-size: 1.2em; font-weight: bold;
+            color: #111; background-color: #ffd700; border: none; border-radius: 10px;
+            cursor: pointer; transition: background-color 0.3s, transform 0.2s;
+        }
+        #restart-button:hover { background-color: #ffec80; transform: scale(1.05); }
+        
+        /* --- Mobile D-Pad Controls --- */
+        #d-pad {
+            display: none; /* Hidden by default, enabled by mobile.js */
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            opacity: 0.6;
+        }
+        .d-pad-button {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #555;
+            border: 2px solid #888;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            user-select: none; /* Prevents text selection on tap */
+        }
+        #d-pad-up { top: 0; left: 50px; }
+        #d-pad-down { bottom: 0; left: 50px; }
+        #d-pad-left { top: 50px; left: 0; }
+        #d-pad-right { top: 50px; right: 0; }
+    </style>
+</head>
+<body>
+    <h1>Maze Navigator</h1>
+    <div id="game-container">
+        <div id="ui-bar">
+            <div class="stat"><div class="stat-label">TIME</div><div class="stat-value" id="time-value">0s</div></div>
+            <div class="stat"><div class="stat-label">MOVES</div><div class="stat-value" id="moves-value">0</div></div>
+            <div class="stat"><div class="stat-label">BACKTRACKS</div><div class="stat-value" id="backtracks-value">0</div></div>
+        </div>
+        <canvas id="mazeCanvas"></canvas>
+        <div id="win-message">
+            <h2>You Win!</h2><p id="final-score"></p><button id="restart-button">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Mobile On-Screen Controls -->
+    <div id="d-pad">
+        <div id="d-pad-up" class="d-pad-button">▲</div>
+        <div id="d-pad-left" class="d-pad-button">◄</div>
+        <div id="d-pad-right" class="d-pad-button">►</div>
+        <div id="d-pad-down" class="d-pad-button">▼</div>
+    </div>
+
+    <!-- 1. Load the shared game engine first -->
+    <script src="game-core.js"></script>
+
+    <!-- 2. The Bootstrapper Script to load the correct version -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Use a reliable check for mobile devices
+            const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const isSmallScreen = window.innerWidth < 800; // Also treat small screens as mobile
+
+            // Create a new script element
+            const script = document.createElement('script');
+
+            // Decide which version to load
+            if (isMobile || isSmallScreen) {
+                console.log("Device detected as mobile. Loading mobile version...");
+                script.src = 'mobile-version.js'; 
+            } else {
+                console.log("Device detected as desktop. Loading desktop version...");
+                script.src = 'desktop-version.js';
+            }
+
+            // Add the chosen script to the document's head, which will cause it to be downloaded and run
+            document.head.appendChild(script);
+        });
+    </script>
+</body>
+</html>
+
