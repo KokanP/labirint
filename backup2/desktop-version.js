@@ -43,10 +43,10 @@ function drawMaze() {
 
 function drawTrail() {
     if (playerPath.length < 2) return;
-    ctx.strokeStyle = trailColor;
-    ctx.lineWidth = Math.max(1, CELL_SIZE / 4);
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    ctx.strokeStyle = trailColor; // MODIFIED: Use dynamic trail color
+    ctx.lineWidth = Math.max(1, CELL_SIZE / 5);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     const first = playerPath[0];
     ctx.moveTo(first.x * CELL_SIZE + CELL_SIZE / 2, first.y * CELL_SIZE + CELL_SIZE / 2);
@@ -65,34 +65,19 @@ function drawEndpoints() {
 }
 
 function drawPlayer(pixelPos) {
-    // MODIFIED: Draw a square instead of a circle
     ctx.fillStyle = COLORS.PLAYER;
-    const size = CELL_SIZE * 0.6;
-    ctx.fillRect(pixelPos.x - size / 2, pixelPos.y - size / 2, size, size);
+    ctx.beginPath();
+    ctx.arc(pixelPos.x, pixelPos.y, CELL_SIZE / 3, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function drawSolverPaths() {
-    // This draws the gray exploration squares
+    // MODIFIED: This now ONLY draws the exploration path.
+    // The yellow path is drawn by drawTrail during autopilot.
     ctx.fillStyle = COLORS.SOLVER_EXPLORE;
     exploredPath.forEach(cell => {
         ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     });
-
-    // This draws the final yellow path before the autopilot starts
-    if (solutionPath.length > 1) {
-        ctx.strokeStyle = COLORS.SOLVER_PATH;
-        ctx.lineWidth = Math.max(1, CELL_SIZE / 4);
-        ctx.lineCap = 'butt';
-        ctx.lineJoin = 'miter';
-        ctx.beginPath();
-        const first = solutionPath[0];
-        ctx.moveTo(first.x * CELL_SIZE + CELL_SIZE / 2, first.y * CELL_SIZE + CELL_SIZE / 2);
-        for (let i = 1; i < solutionPath.length; i++) {
-            const pos = solutionPath[i];
-            ctx.lineTo(pos.x * CELL_SIZE + CELL_SIZE / 2, pos.y * CELL_SIZE + CELL_SIZE / 2);
-        }
-        ctx.stroke();
-    }
 }
 
 // --- Main Draw Function ---
@@ -114,8 +99,8 @@ window.draw = function() {
 
     // Drawing order is important for layers
     drawEndpoints();
-    if(isSolving) drawSolverPaths();
-    drawTrail();
+    if(isSolving) drawSolverPaths(); // Draw gray exploration squares first
+    drawTrail(); // Draw red/yellow path on top
     drawMaze();
     drawPlayer(currentPixelPos);
 }

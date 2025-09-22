@@ -29,19 +29,15 @@ let trailColor;
 // --- SOLVER STATE ---
 let isSolving = false;
 let exploredPath = [];
-let solutionPath = [];
+let solutionPath = []; // Only used for desktop exploration phase display
 
 const keysPressed = {};
 
-// MODIFIED: New retro color palette
 const COLORS = { 
-    WALL: '#fff4e4', 
-    PLAYER: '#29adff', 
-    START: '#00e436', 
-    END: '#ff004d', 
-    TRAIL: '#ff77a8', 
-    SOLVER_EXPLORE: 'rgba(41, 173, 255, 0.3)',
-    SOLVER_PATH: '#ffec27'
+    WALL: '#e0e0e0', PLAYER: '#00aaff', START: '#00e676', 
+    END: '#ff1744', TRAIL: '#ff5252', 
+    SOLVER_EXPLORE: 'rgba(128, 128, 128, 0.5)',
+    SOLVER_PATH: '#ffd700'
 };
 
 class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { top: true, right: true, bottom: true, left: true }; } }
@@ -102,9 +98,10 @@ function triggerWinState(solvedBySolver = false) {
     const winTitle = document.querySelector('#win-message h2');
 
     if (solvedBySolver) {
-        winTitle.textContent = "Solved!";
+        winTitle.textContent = "Maze Solved!";
+        // The optimal path length is now based on playerPath length during autopilot
         const moves = playerPath.length - 1;
-        finalScore.textContent = `Optimal path: ${moves} moves.`;
+        finalScore.textContent = `The optimal path is ${moves} moves.`;
     } else {
         winTitle.textContent = "You Win!";
         let score = 10000 - Math.floor(finalTime * 10) - (move_count * 5) - (backtrack_count * 50);
@@ -156,7 +153,7 @@ function solveMazeBFS(startNode) {
     return { path: [], explorationOrder };
 }
 
-// --- Solver Autopilot ---
+// --- Solver Autopilot (Used by both Mobile and Desktop) ---
 function startAutopilot(path) {
     let currentStep = 0;
     
@@ -190,11 +187,11 @@ function startSolverAnimation() {
     if (isSolving || gameWon) return;
     isSolving = true;
     solveButton.disabled = true;
-    trailColor = COLORS.SOLVER_PATH;
 
     const startNode = grid[playerPos.y][playerPos.x];
     const { path, explorationOrder } = solveMazeBFS(startNode);
     
+    // --- DESKTOP: Exploration followed by Autopilot ---
     if (!isMobileVersion) {
         let i = 0;
         const exploreInterval = setInterval(() => {
@@ -203,12 +200,15 @@ function startSolverAnimation() {
                 i++;
             } else {
                 clearInterval(exploreInterval);
-                solutionPath = path; // Store the final path for drawing
-                startAutopilot(path);
+                // MODIFICATION: Instead of drawing the path, start the autopilot
+                trailColor = COLORS.SOLVER_PATH; // Change trail to yellow
+                startAutopilot(path); // Character starts moving
             }
         }, 5);
-    } else {
-        solutionPath = path;
+    } 
+    // --- MOBILE: Autopilot with yellow trail ---
+    else {
+        trailColor = COLORS.SOLVER_PATH;
         startAutopilot(path);
     }
 }

@@ -1,8 +1,8 @@
 // This script provides the controls and rendering for the mobile version.
-isMobileVersion = true;
+isMobileVersion = true; // Set the global flag
 
-// MODIFIED: Removed 'let' to assign value to existing variable, not declare a new one.
-CELL_SIZE = 20;
+// --- Mobile-Specific Constants ---
+CELL_SIZE = 20; // Smaller cells for a wider view
 const CANVAS_WIDTH = Math.min(window.innerWidth * 0.9, 600);
 const CANVAS_HEIGHT = Math.min(window.innerHeight * 0.6, 600);
 
@@ -10,26 +10,18 @@ canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
 // --- D-Pad Controls ---
-function setupMobileControls() {
-    const keyMap = {
-        'd-pad-up': 'ArrowUp',
-        'd-pad-down': 'ArrowDown',
-        'd-pad-left': 'ArrowLeft',
-        'd-pad-right': 'ArrowRight',
-    };
+// MODIFIED: Fixed the typo for the 'down' button
+const keyMap = { 'd-pad-up': 'ArrowUp', 'd-pad-down': 'ArrowDown', 'd-pad-left': 'ArrowLeft', 'd-pad-right': 'ArrowRight' };
 
-    function handleTouch(event) {
-        event.preventDefault();
-        const key = keyMap[event.target.id];
-        if (key) {
-            const isTouching = event.type === 'touchstart';
-            keysPressed[key] = isTouching;
-        }
+function handleTouch(event) {
+    event.preventDefault();
+    const key = keyMap[event.target.id];
+    if (key) {
+        keysPressed[key] = (event.type === 'touchstart');
     }
-
-    dPad.addEventListener('touchstart', handleTouch, { passive: false });
-    dPad.addEventListener('touchend', handleTouch, { passive: false });
 }
+dPad.addEventListener('touchstart', handleTouch, { passive: false });
+dPad.addEventListener('touchend', handleTouch, { passive: false });
 
 
 // --- Drawing Functions (Mobile: Viewport Camera) ---
@@ -37,8 +29,6 @@ function drawMaze() {
     ctx.strokeStyle = COLORS.WALL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 10);
     ctx.beginPath();
-    // Only draw what's visible in the camera
-    // (A more optimized version would calculate the visible grid portion)
     for (let y = 0; y < MAZE_HEIGHT; y++) {
         for (let x = 0; x < MAZE_WIDTH; x++) {
             const cell = grid[y][x];
@@ -55,10 +45,11 @@ function drawMaze() {
 
 function drawTrail() {
     if (playerPath.length < 2) return;
-    ctx.strokeStyle = trailColor;
-    ctx.lineWidth = Math.max(1, CELL_SIZE / 4);
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    // MODIFIED: Uses the dynamic trailColor variable
+    ctx.strokeStyle = trailColor; 
+    ctx.lineWidth = Math.max(1, CELL_SIZE / 5);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     const first = playerPath[0];
     ctx.moveTo(first.x * CELL_SIZE + CELL_SIZE / 2, first.y * CELL_SIZE + CELL_SIZE / 2);
@@ -77,33 +68,20 @@ function drawEndpoints() {
 }
 
 function drawPlayer(pixelPos) {
-    // MODIFIED: Draw a square instead of a circle
     ctx.fillStyle = COLORS.PLAYER;
-    const size = CELL_SIZE * 0.6;
-    ctx.fillRect(pixelPos.x - size / 2, pixelPos.y - size / 2, size, size);
+    ctx.beginPath();
+    ctx.arc(pixelPos.x, pixelPos.y, CELL_SIZE / 3, 0, Math.PI * 2);
+    ctx.fill();
 }
 
-function drawSolverPaths() {
-    // On mobile, we ONLY draw the final yellow path, not the exploration.
-    if (solutionPath.length > 1) {
-        ctx.strokeStyle = COLORS.SOLVER_PATH;
-        ctx.lineWidth = Math.max(1, CELL_SIZE / 4);
-        ctx.lineCap = 'butt';
-        ctx.lineJoin = 'miter';
-        ctx.beginPath();
-        const first = solutionPath[0];
-        ctx.moveTo(first.x * CELL_SIZE + CELL_SIZE / 2, first.y * CELL_SIZE + CELL_SIZE / 2);
-        for (let i = 1; i < solutionPath.length; i++) {
-            const pos = solutionPath[i];
-            ctx.lineTo(pos.x * CELL_SIZE + CELL_SIZE / 2, pos.y * CELL_SIZE + CELL_SIZE / 2);
-        }
-        ctx.stroke();
-    }
-}
+// MODIFIED: This function is now empty as it's no longer needed.
+// The solver path is drawn via drawTrail.
+function drawSolverPaths() {}
 
-// --- Main Draw Function (Global for gameLoop) ---
+
+// --- Main Draw Function ---
 window.draw = function() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
 
     let currentPixelPos = {
@@ -119,25 +97,20 @@ window.draw = function() {
         if (progress >= 1.0) isMoving = false;
     }
 
-    let cameraX = currentPixelPos.x - CANVAS_WIDTH / 2;
-    let cameraY = currentPixelPos.y - CANVAS_HEIGHT / 2;
-
-    const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - CANVAS_WIDTH;
-    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - CANVAS_HEIGHT;
+    let cameraX = currentPixelPos.x - canvas.width / 2;
+    let cameraY = currentPixelPos.y - canvas.height / 2;
+    const maxCameraX = (MAZE_WIDTH * CELL_SIZE) - canvas.width;
+    const maxCameraY = (MAZE_HEIGHT * CELL_SIZE) - canvas.height;
     cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
     cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
-
     ctx.translate(-cameraX, -cameraY);
 
     drawEndpoints();
-    if(isSolving) drawSolverPaths();
+    drawSolverPaths(); // This is now empty, but we keep the call for consistency
     drawTrail();
     drawMaze();
     drawPlayer(currentPixelPos);
 
     ctx.restore();
 }
-
-// --- Setup ---
-setupMobileControls();
 

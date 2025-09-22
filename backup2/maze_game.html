@@ -3,18 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Labirint: The Maze Algorithm</title>
-    <!-- NEW: Pixel Font Import -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <title>Maze Algorithm Platform</title>
     <style>
         /* --- Basic Page Styling --- */
         body {
-            background-color: #140c1c; /* Dark Purple Background */
+            background-color: #1a1a1a;
             color: #f0f0f0;
-            /* MODIFIED: Pixel Font */
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -22,18 +17,12 @@
             margin: 0;
             flex-direction: column;
             overflow: hidden;
-            /* Prevents blurry text */
-            image-rendering: pixelated;
         }
 
         h1 {
-            color: #fff4e4;
-            text-shadow: 2px 2px 0px #000;
+            color: #e0e0e0;
+            text-shadow: 2px 2px 4px #000;
             margin-bottom: 20px;
-            font-size: 1.8em;
-            /* MODIFIED: Centered the title */
-            text-align: center;
-            width: 90%;
         }
 
         /* --- Algorithm Selection Menu --- */
@@ -41,17 +30,16 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #443453; /* Darker Purple UI element */
-            padding: 20px;
-            /* MODIFIED: Hard border instead of radius/shadow */
-            border: 3px solid #000;
-            box-shadow: 6px 6px 0 #000;
+            background-color: #2c2c2c;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             width: 90%;
             max-width: 500px;
         }
         .algo-option {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         .algo-option:last-child {
             margin-bottom: 0;
@@ -59,29 +47,24 @@
         .algo-option button {
             width: 100%;
             padding: 15px;
-            font-size: 1em;
-            font-weight: normal; /* Pixel fonts are often bold by default */
-            font-family: 'Press Start 2P', cursive;
-            color: #140c1c;
-            border: 3px solid #000;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #111;
+            border: none;
+            border-radius: 10px;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: background-color 0.3s, transform 0.2s;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .algo-option button:hover { 
-            transform: translate(2px, 2px);
-        }
-         .algo-option button:active {
-            transform: translate(4px, 4px);
-        }
+        .algo-option button:hover { transform: scale(1.02); }
         .algo-description {
-            font-size: 0.8em;
-            color: #a49da9; /* Lighter purple/gray */
+            font-size: 0.9em;
+            color: #bbb;
             margin-top: 8px;
             text-align: center;
-            line-height: 1.6;
+            line-height: 1.4;
         }
         .algo-name {
             text-align: left;
@@ -92,15 +75,23 @@
             opacity: 0.8;
         }
 
-        /* --- Difficulty Color Scale (Retro Palette) --- */
-        .difficulty-1 { background-color: #6abe30; } 
-        .difficulty-2 { background-color: #a4d35e; } 
-        .difficulty-3 { background-color: #e4d35a; } 
-        .difficulty-4 { background-color: #f7a244; } 
-        .difficulty-5 { background-color: #f47e3a; } 
-        .difficulty-6 { background-color: #e43b44; } 
-        .difficulty-7 { background-color: #a22633; color: #fff4e4 !important; }
-        .difficulty-8 { background-color: #731e32; color: #fff4e4 !important; }
+        /* --- Difficulty Color Scale --- */
+        .difficulty-1 { background-color: #4CAF50; } /* Green */
+        .difficulty-1:hover { background-color: #66BB6A; }
+        .difficulty-2 { background-color: #8BC34A; }
+        .difficulty-2:hover { background-color: #9CCC65; }
+        .difficulty-3 { background-color: #CDDC39; color: #333 !important; }
+        .difficulty-3:hover { background-color: #D4E157; }
+        .difficulty-4 { background-color: #FFEB3B; color: #333 !important; }
+        .difficulty-4:hover { background-color: #FFEE58; }
+        .difficulty-5 { background-color: #FFC107; }
+        .difficulty-5:hover { background-color: #FFCA28; }
+        .difficulty-6 { background-color: #FF9800; }
+        .difficulty-6:hover { background-color: #FFA726; }
+        .difficulty-7 { background-color: #F44336; }
+        .difficulty-7:hover { background-color: #EF5350; }
+        .difficulty-8 { background-color: #D32F2F; }
+        .difficulty-8:hover { background-color: #E53935; }
 
 
         /* --- Game Container --- */
@@ -109,9 +100,9 @@
             flex-direction: column;
             align-items: center;
             padding: 20px;
-            background-color: #443453;
-            border: 3px solid #000;
-            box-shadow: 6px 6px 0 #000;
+            background-color: #2c2c2c;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             position: relative;
         }
         /* --- UI & Canvas --- */
@@ -120,114 +111,116 @@
             justify-content: space-around;
             width: 100%;
             margin-bottom: 15px;
-            font-size: 0.8em;
-            background-color: #262033;
+            font-size: 1.1em;
+            background-color: #3a3a3a;
             padding: 10px 0;
+            border-radius: 10px;
             align-items: center;
-            border: 3px solid #000;
         }
         .stat { flex: 1; text-align: center; }
-        .stat-label { color: #a49da9; font-size: 0.8em; }
-        .stat-value { color: #fff4e4; }
+        .stat-label { color: #aaa; font-size: 0.8em; }
+        .stat-value { color: #fff; font-weight: bold; }
         #solve-button {
             margin: 0 15px;
             padding: 8px 16px;
-            font-size: 0.8em;
-            font-family: 'Press Start 2P', cursive;
-            font-weight: normal;
-            color: #fff4e4;
-            background-color: #7b40a4; /* Purple button */
-            border: 3px solid #000;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #fff;
+            background-color: #6200ea;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         #solve-button:disabled { background-color: #555; cursor: not-allowed; }
-        #solve-button:hover:not(:disabled) { background-color: #9d59d1; }
+        #solve-button:hover:not(:disabled) { background-color: #7e3ff2; }
 
         canvas {
-            background-color: #140c1c;
-            border: 3px solid #000;
+            background-color: #111;
+            border-radius: 8px;
+            border: 2px solid #444;
         }
         /* --- Win Message & D-Pad --- */
-        #win-message { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(20, 12, 28, 0.9); justify-content: center; align-items: center; flex-direction: column; text-align: center; animation: fadeIn 0.5s; }
+        #win-message { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); border-radius: 15px; justify-content: center; align-items: center; flex-direction: column; text-align: center; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        #win-message h2 { font-size: 2.5em; color: #ffec27; margin: 0; text-shadow: 3px 3px 0px #000; }
-        #win-message p { font-size: 1.2em; color: #fff4e4; margin-top: 15px; line-height: 1.5; }
-        #restart-button { margin-top: 30px; padding: 15px 30px; font-size: 1em; font-family: 'Press Start 2P', cursive; color: #140c1c; background-color: #ffec27; border: 3px solid #000; cursor: pointer; }
-        #restart-button:hover { background-color: #fff4e4; }
-        #d-pad { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; opacity: 0.8; }
-        .d-pad-button { position: absolute; width: 50px; height: 50px; background-color: #443453; border: 3px solid #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #fff4e4; user-select: none; }
+        #win-message h2 { font-size: 3em; color: #ffd700; margin: 0; text-shadow: 3px 3px 6px #000; }
+        #win-message p { font-size: 1.5em; color: #f0f0f0; margin-top: 10px; }
+        #restart-button { margin-top: 30px; padding: 15px 30px; font-size: 1.2em; font-weight: bold; color: #111; background-color: #ffd700; border: none; border-radius: 10px; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
+        #restart-button:hover { background-color: #ffec80; transform: scale(1.05); }
+        #d-pad { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; opacity: 0.6; }
+        .d-pad-button { position: absolute; width: 50px; height: 50px; background-color: #555; border: 2px solid #888; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; user-select: none; }
         #d-pad-up { top: 0; left: 50px; } #d-pad-down { bottom: 0; left: 50px; } #d-pad-left { top: 50px; left: 0; } #d-pad-right { top: 50px; right: 0; }
 
         /* --- Compact mobile menu --- */
         @media (max-width: 600px) {
-            h1 { font-size: 1.2em; }
-            #selection-menu { padding: 15px; box-shadow: 4px 4px 0 #000;}
-            .algo-option button { padding: 10px; font-size: 0.8em; }
-            .algo-description { font-size: 0.7em; margin-top: 5px;}
-            #win-message h2 { font-size: 2em; }
-            #win-message p { font-size: 1em; }
+            h1 { font-size: 1.5em; }
+            #selection-menu { padding: 20px; }
+            .algo-option button { padding: 12px; font-size: 1em; }
+            .algo-description { font-size: 0.8em; }
+            #win-message h2 { font-size: 2.5em; }
+            #win-message p { font-size: 1.2em; }
         }
     </style>
 </head>
 <body>
-    <h1>Labirint: The Maze Algorithm</h1>
+    <h1>Maze Algorithm Platform</h1>
 
     <div id="selection-menu">
         <div class="algo-option">
             <button id="start-dfs" class="difficulty-1">
-                <span class="algo-name">Depth-First</span>
+                <span class="algo-name">Depth-First Search</span>
                 <span class="algo-difficulty">(1/8)</span>
             </button>
-            <div class="algo-description">Creates long, winding corridors. Ideal for learning the controls.</div>
+            <p class="algo-description">Creates long, winding corridors with very few branches. Ideal for learning the controls.</p>
         </div>
         <div class="algo-option">
             <button id="start-growing-tree" class="difficulty-2">
                 <span class="algo-name">Growing Tree</span>
                 <span class="algo-difficulty">(2/8)</span>
             </button>
-            <div class="algo-description">Similar to DFS, this algorithm produces long, simple paths.</div>
+            <p class="algo-description">Similar to DFS, this algorithm produces long paths and is very straightforward to navigate.</p>
         </div>
         <div class="algo-option">
             <button id="start-binary-tree" class="difficulty-3">
                 <span class="algo-name">Binary Tree</span>
                 <span class="algo-difficulty">(3/8)</span>
             </button>
-            <div class="algo-description">Very fast. Creates a strong diagonal bias that can be exploited to solve.</div>
+            <p class="algo-description">Very fast to generate. Creates a strong diagonal bias, which can be exploited to solve it easily.</p>
         </div>
         <div class="algo-option">
             <button id="start-sidewinder" class="difficulty-4">
                 <span class="algo-name">Sidewinder</span>
                 <span class="algo-difficulty">(4/8)</span>
             </button>
-            <div class="algo-description">Features long horizontal corridors with paths leading upwards.</div>
+            <p class="algo-description">An improvement on Binary Tree, it features long horizontal corridors with paths leading upwards.</p>
         </div>
         <div class="algo-option">
             <button id="start-division" class="difficulty-5">
                 <span class="algo-name">Recursive Division</span>
                 <span class="algo-difficulty">(5/8)</span>
             </button>
-            <div class="algo-description">Builds walls instead of carving paths, creating a blocky look.</div>
+            <p class="algo-description">Builds walls instead of carving paths, resulting in a maze with a distinct rectangular and blocky look.</p>
         </div>
         <div class="algo-option">
             <button id="start-prim" class="difficulty-6">
-                <span class="algo-name">Prim's</span>
+                <span class="algo-name">Prim's Algorithm</span>
                 <span class="algo-difficulty">(6/8)</span>
             </button>
-            <div class="algo-description">Grows like a crystal, creating a complex maze with many short dead ends.</div>
+            <p class="algo-description">Grows like a crystal from a starting point, creating a complex maze with many short dead ends.</p>
         </div>
         <div class="algo-option">
             <button id="start-kruskal" class="difficulty-7">
-                <span class="algo-name">Kruskal's</span>
+                <span class="algo-name">Kruskal's Algorithm</span>
                 <span class="algo-difficulty">(7/8)</span>
             </button>
-            <div class="algo-description">Produces a highly-branched maze with lots of cul-de-sacs.</div>
+            <p class="algo-description">Produces a highly-branched maze with lots of cul-de-sacs, requiring careful navigation.</p>
         </div>
         <div class="algo-option">
             <button id="start-wilson" class="difficulty-8">
-                <span class="algo-name">Wilson's</span>
+                <span class="algo-name">Wilson's Algorithm</span>
                 <span class="algo-difficulty">(8/8)</span>
             </button>
-            <div class="algo-description">Creates a completely unbiased, uniform, and challenging maze.</div>
+            <p class="algo-description">Creates a completely unbiased, uniform maze. Statistically, this is the most random and challenging type.</p>
         </div>
     </div>
 
