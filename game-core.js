@@ -1,179 +1,133 @@
-// --- DOM Elements ---
+// --- Core Game Logic & State Management ---
+
+// --- ONE-TIME DOM ELEMENT SETUP ---
 const canvas = document.getElementById('mazeCanvas');
 const ctx = canvas.getContext('2d');
 const timeValue = document.getElementById('time-value');
 const movesValue = document.getElementById('moves-value');
 const backtracksValue = document.getElementById('backtracks-value');
 const winMessage = document.getElementById('win-message');
-const finalScoreDisplay = document.getElementById('final-score');
+const finalScore = document.getElementById('final-score');
 const restartButton = document.getElementById('restart-button');
 const selectionMenu = document.getElementById('selection-menu');
 const gameContainer = document.getElementById('game-container');
 
-// --- Game Constants ---
-const MAZE_WIDTH = 40;
-const MAZE_HEIGHT = 40;
+// --- Global Game State Variables ---
+let MAZE_WIDTH = 40, MAZE_HEIGHT = 40;
+let CELL_SIZE; // Will be set by the version script
 const MOVE_SPEED = 0.1; // Seconds per cell
-const COLORS = {
-    WALL: '#d0d0d0',
-    PLAYER: '#00aaff',
-    START: 'rgba(0, 255, 128, 0.7)',
-    END: 'rgba(255, 0, 128, 0.7)',
-    TRAIL: 'rgba(255, 50, 50, 0.8)',
-};
+let grid, playerPos, endPos;
+let playerPath, visitedCells;
+let move_count, backtrack_count, startTime, finalTime, final_score;
+let isMoving, animStartTime, startPixelPos, targetPixelPos;
+let gameWon, gameLoopId;
 
-// --- Mutable Game Settings ---
-let CELL_SIZE; // Will be set by desktop- or mobile-version.js
+const keysPressed = {}; // Shared object for controls
 
-// --- Game State Variables ---
-let grid = [];
-let playerPos = { x: 0, y: 0 };
-let startPos = { x: 0, y: 0 };
-let endPos = { x: MAZE_WIDTH - 1, y: MAZE_HEIGHT - 1 };
+const COLORS = { WALL: '#e0e0e0', PLAYER: '#00aaff', START: '#00e676', END: '#ff1744', TRAIL: '#ff5252' };
 
-let playerPath = [];
-let visitedCells = new Set();
-let moveCount = 0;
-let backtrackCount = 0;
-let startTime = 0;
-let gameWon = false;
+class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { top: true, right: true, bottom: true, left: true }; } }
 
-let keysPressed = {};
-
-// --- Animation State ---
-let isMoving = false;
-let animStartTime = 0;
-let startPixelPos = { x: 0, y: 0 };
-let targetPixelPos = { x: 0, y: 0 };
-
-// --- Cell Class (used by all generators) ---
-class Cell {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.walls = { top: true, right: true, bottom: true, left: true };
-        this.visited = false; // Used by some generators
-    }
+// --- ONE-TIME INITIALIZATION ---
+function initGame() {
+    restartButton.addEventListener('click', () => {
+        winMessage.style.display = 'none';
+        selectionMenu.style.display = 'flex';
+        gameContainer.style.display = 'none';
+        if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    });
+    // The main game loop will be started by restartGame
 }
 
-// --- UI & Scoring ---
-function updateUI() {
-    const elapsed = gameWon ? (winMessage.dataset.finalTime || 0) : (performance.now() - startTime) / 1000;
-    timeValue.textContent = `${Math.floor(elapsed)}s`;
-    movesValue.textContent = moveCount;
-    backtracksValue.textContent = backtrackCount;
-}
-
-function calculateScore(time, moves, backtracks) {
-    let score = Math.max(0, 10000 - (time * 10) - (moves * 5) - (backtracks * 50));
-    return Math.floor(score);
-}
-
-// --- Game Logic ---
-function init() {
-    gameWon = false;
-    isMoving = false;
-    winMessage.style.display = 'none';
-
-    moveCount = 0;
-    backtrackCount = 0;
-    
-    playerPos = { x: startPos.x, y: startPos.y };
-    playerPath = [playerPos];
-    visitedCells.clear();
-    visitedCells.add(`${playerPos.x},${playerPos.y}`);
-
-    // Generate maze using the globally assigned generator function
-    if (window.mazeGenerator) {
-        grid = window.mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
-    } else {
-        console.error("No maze generator has been selected!");
-        return;
-    }
-    
-    startTime = performance.now();
-}
-
-function update() {
-    if (gameWon) return;
-
-    updateUI();
-
-    if (!isMoving) {
-        const currentCell = grid[playerPos.y][playerPos.x];
-        let moved = false;
-        let newPos = { ...playerPos };
-
-        if (keysPressed.ArrowUp && !currentCell.walls.top) { newPos.y--; moved = true; }
-        else if (keysPressed.ArrowDown && !currentCell.walls.bottom) { newPos.y++; moved = true; }
-        else if (keysPressed.ArrowLeft && !currentCell.walls.left) { newPos.x--; moved = true; }
-        else if (keysPressed.ArrowRight && !currentCell.walls.right) { newPos.x++; moved = true; }
-
-        if (moved) {
-            moveCount++;
-            if (visitedCells.has(`${newPos.x},${newPos.y}`)) {
-                backtrackCount++;
-            }
-            visitedCells.add(`${newPos.x},${newPos.y}`);
-            
-            isMoving = true;
-            animStartTime = performance.now();
-            startPixelPos = {
-                x: playerPos.x * CELL_SIZE + CELL_SIZE / 2,
-                y: playerPos.y * CELL_SIZE + CELL_SIZE / 2
-            };
-            targetPixelPos = {
-                x: newPos.x * CELL_SIZE + CELL_SIZE / 2,
-                y: newPos.y * CELL_SIZE + CELL_SIZE / 2
-            };
-            playerPos = newPos;
-            playerPath.push(playerPos);
-
-            if (playerPos.x === endPos.x && playerPos.y === endPos.y) {
-                gameWon = true;
-                const finalTime = (performance.now() - startTime) / 1000;
-                winMessage.dataset.finalTime = finalTime;
-                const score = calculateScore(finalTime, moveCount, backtrackCount);
-                finalScoreDisplay.textContent = `Score: ${score}`;
-                winMessage.style.display = 'flex';
-            }
-        }
-    }
-}
-
-function gameLoop() {
-    update();
-    if (window.draw) {
-        window.draw(); // draw() is defined in desktop- or mobile-version.js
-    }
-    requestAnimationFrame(gameLoop);
-}
-
-// --- Game Starter ---
-function startGame() {
-    // Hide menu, show game
+// --- GAME RESET & START FUNCTION ---
+function restartGame() {
     selectionMenu.style.display = 'none';
     gameContainer.style.display = 'flex';
-
-    // Load the correct version (desktop/mobile) based on device
-    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    const isSmallScreen = window.innerWidth < 800;
-
-    const versionScript = (isMobile || isSmallScreen) ? 'mobile-version.js' : 'desktop-version.js';
+    winMessage.style.display = 'none';
     
-    // Dynamically load the script for the detected version
-    const script = document.createElement('script');
-    script.src = versionScript;
-    script.onload = () => {
-        // The loaded script will call init() and gameLoop()
-        console.log(`${versionScript} loaded and started.`);
-    };
-    document.head.appendChild(script);
+    // Reset game state
+    playerPos = { x: 0, y: 0 };
+    endPos = { x: MAZE_WIDTH - 1, y: MAZE_HEIGHT - 1 };
+    playerPath = [playerPos];
+    visitedCells = new Set([`${playerPos.x},${playerPos.y}`]);
+    move_count = 0;
+    backtrack_count = 0;
+    startTime = performance.now();
+    isMoving = false;
+    gameWon = false;
+
+    // Generate new maze using the selected generator
+    if (typeof window.mazeGenerator === 'function') {
+        grid = window.mazeGenerator(MAZE_WIDTH, MAZE_HEIGHT);
+    } else {
+        console.error("No maze generator function selected!");
+        return;
+    }
+
+    // Stop any previous game loop and start a new one
+    if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    gameLoop();
 }
 
-restartButton.addEventListener('click', () => {
-    // For restarting, we just need to re-initialize the game state.
-    // The generator and version script are already loaded.
-    init();
-});
+// --- CORE GAME UPDATE LOGIC ---
+function update() {
+    if (gameWon || isMoving) return;
+
+    let targetDirection = null;
+    if (keysPressed.ArrowUp) targetDirection = { x: 0, y: -1, wall: 'top' };
+    else if (keysPressed.ArrowDown) targetDirection = { x: 0, y: 1, wall: 'bottom' };
+    else if (keysPressed.ArrowLeft) targetDirection = { x: -1, y: 0, wall: 'left' };
+    else if (keysPressed.ArrowRight) targetDirection = { x: 1, y: 0, wall: 'right' };
+
+    if (targetDirection) {
+        const currentCell = grid[playerPos.y][playerPos.x];
+        if (!currentCell.walls[targetDirection.wall]) {
+            const nextPos = { x: playerPos.x + targetDirection.x, y: playerPos.y + targetDirection.y };
+            
+            // Start animation
+            isMoving = true;
+            animStartTime = performance.now();
+            startPixelPos = { x: playerPos.x * CELL_SIZE + CELL_SIZE / 2, y: playerPos.y * CELL_SIZE + CELL_SIZE / 2 };
+            targetPixelPos = { x: nextPos.x * CELL_SIZE + CELL_SIZE / 2, y: nextPos.y * CELL_SIZE + CELL_SIZE / 2 };
+
+            // Update logical state
+            playerPos = nextPos;
+            move_count++;
+            const posKey = `${playerPos.x},${playerPos.y}`;
+            if (visitedCells.has(posKey)) backtrack_count++;
+            visitedCells.add(posKey);
+            playerPath.push(playerPos);
+        }
+    }
+
+    // Check for win condition
+    if (playerPos.x === endPos.x && playerPos.y === endPos.y) {
+        gameWon = true;
+        finalTime = (performance.now() - startTime) / 1000;
+        let score = 10000 - Math.floor(finalTime * 10) - (move_count * 5) - (backtrack_count * 50);
+        final_score = Math.max(0, score);
+        finalScore.textContent = `Score: ${final_score}`;
+        winMessage.style.display = 'flex';
+    }
+}
+
+// --- UI UPDATE ---
+function updateUI() {
+    if (!gameWon) {
+        const elapsed = (performance.now() - startTime) / 1000;
+        timeValue.textContent = `${Math.floor(elapsed)}s`;
+    }
+    movesValue.textContent = move_count;
+    backtracksValue.textContent = backtrack_count;
+}
+
+// --- MAIN GAME LOOP ---
+function gameLoop() {
+    update();
+    if (typeof window.draw === 'function') {
+        window.draw(); // Call the draw function from desktop/mobile script
+    }
+    updateUI();
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
 

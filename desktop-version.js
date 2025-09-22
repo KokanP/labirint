@@ -1,15 +1,30 @@
 // This script provides the controls and rendering for the desktop version.
 
 // --- Desktop-Specific Constants ---
-const SCREEN_SIZE = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.7, 800);
-CELL_SIZE = Math.floor(SCREEN_SIZE / MAZE_WIDTH); // Set the global CELL_SIZE
-const CANVAS_WIDTH = CELL_SIZE * MAZE_WIDTH;
-const CANVAS_HEIGHT = CELL_SIZE * MAZE_HEIGHT;
+const availableWidth = window.innerWidth * 0.9;
+const availableHeight = window.innerHeight * 0.7;
+CELL_SIZE = Math.floor(Math.min(availableWidth / MAZE_WIDTH, availableHeight / MAZE_HEIGHT));
+canvas.width = MAZE_WIDTH * CELL_SIZE;
+canvas.height = MAZE_HEIGHT * CELL_SIZE;
 
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
+// --- Keyboard Controls ---
+// This ensures that the event listeners are added only once when this script loads.
+window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = true;
+    }
+});
 
-// --- Drawing Functions (Desktop: Full Map View) ---
+window.addEventListener('keyup', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = false;
+    }
+});
+
+
+// --- Drawing Functions (Desktop: Full Map) ---
 function drawMaze() {
     ctx.strokeStyle = COLORS.WALL;
     ctx.lineWidth = Math.max(1, CELL_SIZE / 10);
@@ -60,11 +75,7 @@ function drawPlayer(pixelPos) {
 
 // --- Main Draw Function (Global for gameLoop) ---
 window.draw = function() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    drawEndpoints();
-    drawTrail();
-    drawMaze();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     let currentPixelPos = {
         x: playerPos.x * CELL_SIZE + CELL_SIZE / 2,
@@ -79,22 +90,9 @@ window.draw = function() {
         if (progress >= 1.0) isMoving = false;
     }
 
+    drawEndpoints();
+    drawTrail();
+    drawMaze();
     drawPlayer(currentPixelPos);
 }
 
-// --- Event Listeners ---
-window.addEventListener('keydown', e => {
-    if (keysPressed.hasOwnProperty(e.key)) {
-        keysPressed[e.key] = true;
-    }
-});
-
-window.addEventListener('keyup', e => {
-    if (keysPressed.hasOwnProperty(e.key)) {
-        keysPressed[e.key] = false;
-    }
-});
-
-// --- Start Game ---
-init();
-gameLoop();

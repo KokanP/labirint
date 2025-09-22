@@ -191,25 +191,51 @@
     <div id="d-pad"><div id="d-pad-up" class="d-pad-button">▲</div><div id="d-pad-left" class="d-pad-button">◄</div><div id="d-pad-right" class="d-pad-button">►</div><div id="d-pad-down" class="d-pad-button">▼</div></div>
 
     <script>
+        // --- Refactored Game Loading Logic ---
+        let coreLoaded = false;
+        let versionLoaded = false;
+
         function loadScript(src, callback) {
             const script = document.createElement('script');
             script.src = src;
-            script.onload = callback;
+            script.onload = () => {
+                if (callback) callback();
+            };
             script.onerror = () => console.error(`Failed to load script: ${src}`);
             document.head.appendChild(script);
         }
 
+        function initializeAndStartGame() {
+            // This function is the final step, called after all scripts are loaded.
+            initGame(); // A new function in game-core.js for one-time setup
+            restartGame(); // A new function for resetting the game state
+        }
+
         function selectAlgorithm(algoFile, generatorFunctionName) {
             loadScript(`algorithms/${algoFile}`, () => {
-                if (typeof window[generatorFunctionName] === 'function') {
-                    window.mazeGenerator = window[generatorFunctionName];
-                    loadScript('game-core.js', () => { startGame(); });
+                window.mazeGenerator = window[generatorFunctionName];
+
+                if (!coreLoaded) {
+                    coreLoaded = true;
+                    loadScript('game-core.js', () => {
+                        const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                        const versionFile = isMobile ? 'mobile-version.js' : 'desktop-version.js';
+                        
+                        if (!versionLoaded) {
+                            versionLoaded = true;
+                            loadScript(versionFile, initializeAndStartGame);
+                        } else {
+                            initializeAndStartGame();
+                        }
+                    });
                 } else {
-                    console.error(`Generator function ${generatorFunctionName} not found in ${algoFile}`);
+                    // If core is already loaded, just reset the game.
+                    restartGame();
                 }
             });
         }
-
+        
+        // --- Event Listeners for Menu Buttons ---
         document.getElementById('start-dfs').addEventListener('click', () => selectAlgorithm('dfs.js', 'generateDFS'));
         document.getElementById('start-kruskal').addEventListener('click', () => selectAlgorithm('kruskal.js', 'generateKruskal'));
         document.getElementById('start-division').addEventListener('click', () => selectAlgorithm('division.js', 'generateDivision'));
